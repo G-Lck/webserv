@@ -22,7 +22,7 @@ This workflow helps us work in parallel without breaking each other's code.
 5. main only gets clean, tested, working changes.
 
 ## Documentation Workflow (No PR Required)
-Use this when you only change files inside doc.
+Use this when you only change files inside docs.
 
 1. Update local main:
 ```bash
@@ -39,7 +39,7 @@ git checkout -b docs/update-http-notes
 
 4. Commit and push:
 ```bash
-git add doc
+git add docs
 git commit -m "docs: update HTTP notes"
 git push -u origin docs/update-http-notes
 ```
@@ -91,7 +91,7 @@ Typical release flow:
 ## Full Example
 ### Example A: Documentation only
 - Create docs/add-poll-examples from main.
-- Edit only doc files.
+- Edit only docs files.
 - Commit and push.
 - Merge without PR (team rule).
 
