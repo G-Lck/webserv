@@ -1,4 +1,4 @@
-# Team Git Workflow (Beginner Friendly)
+# Team Git Workflow
 
 ## Why We Use This Workflow
 This workflow helps us work in parallel without breaking each other's code.
