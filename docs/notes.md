@@ -1,15 +1,12 @@
 # Notes - Webserv (42)
 
 ## Table des matieres
-- [I/O non-bloquante](#io-non-bloquante)
-- [poll](#poll)
-- [select](#select)
-- [epoll](#epoll)
+- [Overview](#overview)
+- [IP addresses](#ip-addresses)
+- [Poll, select, epoll and non-blocking](#poll-select-epoll-and-non-blocking-probleme)
 - [HTTP protocol](#http-protocol)
-- [Sockets en C/C++](#sockets-en-cc)
-- [CGI](#cgi)
-- [Parsing de config type NGINX](#parsing-de-config-type-nginx)
-- [Architecture generale d'un serveur](#architecture-generale-dun-serveur)
+- [Sockets in C/C++](#sockets-in-cc)
+- [CGI](#cgi-common-gateway-interface)
 
 ---
 ## Overview
@@ -32,6 +29,9 @@ I think we only have to manage from 5 (or 3) to 8 but we have to verify if there
 
 But we have to do the job of Apache or Nginx (web server software).
 
+### Ressources
+- Web Request Flow https://www.youtube.com/watch?v=hWyBeEF3CqQ
+
 ## IP addresses
 
 
@@ -45,38 +45,36 @@ But we have to do the job of Apache or Nginx (web server software).
 
 - Maybe not relevant here but there is sometimes privates network, all the ip adresses are behind another one given to the public and the firewall will convert.
 
-### Points a maitriser pour webserv
+### What do we have to do for webserv
 - je crois que les problemes d'ipv4 et ipv6 sont gérés par `getaddrinfo`. Si ce n'est pas le cas voir https://beej.us/guide/bgnet/ chap3.
 - We will have to be careful to use the convert functions when we send or receive.
 
-### Pitfalls frequents
-- 
-
-### Ressources utiles
+### Ressources
 - https://beej.us/guide/bgnet/
 
 ## poll, select, epoll and non-blocking probleme
-### non-blocking
+### Key Notions
+#### non-blocking
 
 - Most system call are blocking (**Synchronous Calls**), they do they have to do and when it's over they return, like our usual functions.
 
 - Here we want to be able to listen to many connection, and if one has a really big paquet to send we don't want to block the other ones (not sure but I think we want to do like a loop through connections and we take each time a little bit from each connection). So we need **Non-Blocking Cals Asynchronous**, it does something in background and call an event when the task is completed. It's not a multithreading !
 
 
-### select() system call
+#### select() system call
 - Select take files descriptors and tell us when one of them is ready for reading.
 - Full man page: [select()](man/select.md)
 
-### poll() system call
+#### poll() system call
 - Same than select, but they manage fd differently and it has a more flexible limit. (It just seems to be better but we should read more about that).
 - Full man page: [poll()](man/poll.md)
 
-### epoll system call
+#### epoll system call
 - Linux event API similar to poll, usually better for many simultaneous connections. (Even better maybe ? But linux only...)
 - Full man page: [epoll](man/epoll.md)
 
 
-### Ressources utiles
+### Ressources
 - select: https://www.youtube.com/watch?v=Y6pFtgRdUts
 - poll: 
 ---
@@ -93,7 +91,7 @@ But we have to do the job of Apache or Nginx (web server software).
 ### Attention points
 - 
 
-### Ressources utiles
+### Ressources
 - 
 
 ---
@@ -109,68 +107,14 @@ But we have to do the job of Apache or Nginx (web server software).
 ### Key Notions
 - CGI is one method by which a web server can obtain data from (or send data to) databases, documents, and other programs, and present that data to viewers via the web. More simply, a CGI is a program intended to be run on the web. A CGI program can be written in any programming language, it could be a script or a binary file.
 - The more common used are PHP, Bash, Perl, Ruby, Python, C or C++. Python or PHP seems to be the easiest ones, but it's up to us want what we want to learn.
+
+### What do we have to do for webserv
 - Maybe we don't have to write the script but be able to support a .php CGI. We need to go deeper in that.
 
-### Points a maitriser pour webserv
-- 
-
-### Pitfalls frequents
+### Attentions points
 - 
 
 ### Ressources
-- Web Request Flow https://www.youtube.com/watch?v=hWyBeEF3CqQ
-
+- 
 ---
 
-## Parsing de config type NGINX
-### Objectif
-
-### Notions cles
-- Blocs (`http`, `server`, `location`)
-- Directives et heritage
-- Validation syntaxique et semantique
-
-### Points a maitriser pour webserv
-- 
-
-### Pitfalls frequents
-- 
-
-### Ressources utiles
-- 
-
----
-
-## Architecture generale d'un serveur
-### Objectif
-
-### Composants principaux
-- Boucle d'evenements
-- Gestion des connexions
-- Parser HTTP
-- Routage vers ressources/fichiers/CGI
-- Construction de la reponse
-- Gestion des erreurs
-- Logging
-
-### Points a maitriser pour webserv
-- 
-
-### Pitfalls frequents
-- 
-
-### Ressources utiles
-- 
-
----
-
-## Checklist de progression
-- [ ] I/O non-bloquante
-- [ ] poll
-- [ ] select
-- [ ] epoll
-- [ ] HTTP protocol
-- [ ] Sockets en C/C++
-- [ ] CGI
-- [ ] Parsing de config type NGINX
-- [ ] Architecture generale d'un serveur
