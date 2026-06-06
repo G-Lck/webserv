@@ -3,30 +3,175 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Webserv Docs</title>
+  <title>Webserv</title>
   <style>
-	body { font-family: Arial, sans-serif; margin: 0; background: #f7f7f7; color: #222; }
-	header { background: #111; color: #fff; padding: 18px 24px; }
-	nav { display: flex; gap: 12px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #ddd; }
-	nav a { text-decoration: none; padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; color: #111; background: #fafafa; }
-	nav a:hover { background: #eee; }
-	main { max-width: 900px; margin: 24px auto; padding: 0 16px; }
+    :root {
+      --bg: #ffffff;
+      --text: #2b2725;
+      --brick: #b5522d;
+      --brick-dark: #8f3f24;
+      --beige: #efe2d2;
+      --beige-2: #f7efe4;
+      --line: #e5d5c2;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 10% 0%, var(--beige-2) 0%, transparent 40%),
+        radial-gradient(circle at 90% 100%, #f3e7d8 0%, transparent 35%),
+        var(--bg);
+      min-height: 100vh;
+    }
+
+    .wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 32px 20px 48px;
+    }
+
+    .hero {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: linear-gradient(135deg, #fff 0%, var(--beige-2) 100%);
+      padding: 28px 24px;
+      margin-bottom: 24px;
+    }
+
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: clamp(2rem, 4vw, 3rem);
+      line-height: 1;
+      letter-spacing: 0.02em;
+      color: var(--brick-dark);
+    }
+
+    .hero p {
+      margin: 0;
+      font-size: 1rem;
+      color: #5e5149;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+      padding: 18px 16px;
+      min-height: 150px;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto auto 0;
+      width: 100%;
+      height: 6px;
+      background: linear-gradient(90deg, var(--brick), #d07a53);
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+      border-color: #d8c2a8;
+      box-shadow: 0 8px 24px rgba(61, 38, 21, 0.08);
+    }
+
+    .card h2 {
+      margin: 12px 0 8px;
+      font-size: 1.2rem;
+      color: var(--brick-dark);
+    }
+
+    .card p {
+      margin: 0;
+      color: #64574e;
+      line-height: 1.4;
+    }
+
+    .card.soon {
+      background: #fff;
+      cursor: default;
+    }
+
+    .card.soon:hover {
+      transform: none;
+      box-shadow: none;
+      border-color: var(--line);
+    }
+
+    .pill {
+      display: inline-block;
+      background: #fff3eb;
+      color: var(--brick-dark);
+      border: 1px solid #efc8b0;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border-radius: 999px;
+      padding: 4px 8px;
+    }
+
+    @media (max-width: 920px) {
+      .cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 620px) {
+      .wrap {
+        padding: 22px 14px 32px;
+      }
+
+      .cards {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 </head>
 <body>
-  <header>
-	<h1>Webserv Documentation</h1>
-  </header>
+  <main class="wrap">
+    <section class="hero">
+      <h1>Webserv</h1>
+      <p>Project documentation hub. Pick a section to continue.</p>
+    </section>
 
-  <nav>
-	<a href="./notes.html">Notes</a>
-	<a href="./git-workflow.html">Git Workflow</a>
-  </nav>
+    <section class="cards">
+      <a class="card" href="./notes.html">
+        <span class="pill">Documentation</span>
+        <h2>Notes</h2>
+        <p>Main technical notes for the Webserv project.</p>
+      </a>
 
-  <main>
-	<h2>Welcome</h2>
-	<p>This is the home page of our project documentation.</p>
-	<p>Add more sections by creating new files and adding links in the nav bar.</p>
+      <a class="card" href="./git-workflow.html">
+        <span class="pill">Team Process</span>
+        <h2>Git Workflow</h2>
+        <p>Branching rules and beginner-friendly workflow.</p>
+      </a>
+
+      <!--
+      <article class="card soon" aria-disabled="true">
+        <span class="pill">Coming Soon</span>
+        <h2>Next Section</h2>
+        <p>Add your next documentation page and turn this card into a link.</p>
+      </article>
+      -->
+    </section>
   </main>
 </body>
 </html>
