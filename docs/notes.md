@@ -13,7 +13,7 @@
 
 ### Web Request Flow
 1. Entering the URL
-1. DNS Resolution
+1. DNS Resolution (Done by gettaddresseinfo())
 1. Establishing the Connection (TCP, 3 way handshake, SYN/ACK)
 1. Sending the HTTP Request
 1. **Server Receives the Request**(Apache or Nginx direct the request)
