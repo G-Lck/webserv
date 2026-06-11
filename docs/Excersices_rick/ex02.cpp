@@ -4,6 +4,7 @@
 #include <vector>       // std::vector (perfect for managing your pollfd roster)
 #include <cstring>      // std::memset(), std::strlen()
 #include <utility>		// std::pair
+#include <map>			// std::map
 
 // --- POSIX Sockets & Network ---
 #include <sys/socket.h> // socket(), bind(), listen(), accept(), send(), recv(), setsockopt()
@@ -100,27 +101,31 @@ int	main()
 	//~It forces functions like recv() and accept() to return an error immediately if there is no data, rather than freezing the program.
 	fcntl(fd_socket, F_SETFL, O_NONBLOCK);
 
-	//+ Store all the fd for each client generated
+	//+ Persistent containers tying an FD to its leftover inbound and outbound data
+    std::map<int, std::string> client_buffers;    // Data received but not fully parsed
+    std::map<int, std::string> client_responses;  // Responses built but not fully sent
+
+    //+ Container for poll() to monitor
     std::vector<struct pollfd> fds;
 
     //+ Add the main socket to the container BEFORE the loop
-    struct pollfd	main_socket;
+    struct pollfd main_socket;
     main_socket.fd = fd_socket;
-    main_socket.events = POLLIN; // We want to know when there is data to read (new connection)
+    main_socket.events = POLLIN; 
     main_socket.revents = 0;
     fds.push_back(main_socket);
 
     while (1)
     {
-        //+ Wait indefinitely (-1) until an event occurs on ANY socket in our vector
-        //* &fds[0] is the standard way to pass vector data to a C function
+        //+ Wait until an event occurs on ANY socket in our vector
+        //* &fds[0] is the standard way to pass vector data to a C function in C++98
         if (poll(&fds[0], fds.size(), -1) == -1)
         {
             std::cout << "poll error" << std::endl;
             continue; 
         }
 
-        //+ Iterate through the container of fds
+        //+ Iterating Through the Results
         for (size_t i = 0; i < fds.size(); ++i)
         {
             //+ If revents is 0, nothing happened on this specific socket
@@ -130,7 +135,7 @@ int	main()
             //+ Is the socket ready to be read?
             if (fds[i].revents & POLLIN)
             {
-                //+ Scenario A: The Main Socket is Ready (New Connection)
+                //+ 6. Scenario A: The Main Socket is Ready (New Connection)
                 if (fds[i].fd == fd_socket)
                 {
                     struct sockaddr_in  addr_client;
@@ -140,13 +145,13 @@ int	main()
                     if (fd_client == -1)
                         continue;
 
-                    //+ Apply non block to this new client
+                    //+ Apply non-block to this new client
                     fcntl(fd_client, F_SETFL, O_NONBLOCK);
 
                     //+ Add to Container
                     struct pollfd new_client;
                     new_client.fd = fd_client;
-                    new_client.events = POLLIN; // Watch for incoming HTTP requests
+                    new_client.events = POLLIN; 
                     new_client.revents = 0;
                     fds.push_back(new_client);
                 }
@@ -160,28 +165,56 @@ int	main()
                     if (bytes_read <= 0)
                     {
                         close(fds[i].fd);
+                        client_buffers.erase(fds[i].fd);   //~ Prevent memory leaks
+                        client_responses.erase(fds[i].fd); //~ Prevent memory leaks
                         fds.erase(fds.begin() + i);
-                        --i;
+                        --i; //~ Adjust iterator since vector shrank
                     }
                     else
                     {
-                        //+ Store the data and parse HTTP request
-                        // ...
+                        //+ 1. Append raw bytes to this client's persistent string
+                        client_buffers[fds[i].fd].append(buffer, bytes_read);
+
+                        //+ 2. Process ALL complete requests trapped in the string
+                        while (request_is_complete(client_buffers[fds[i].fd]))
+                        {
+                            //+ Extract, parse, and build response (You implement these)
+                            std::string single_request = extract_request(client_buffers[fds[i].fd]);
+                            std::string single_response = process_and_build_response(single_request);
+
+                            //+ Append response to OUTBOUND queue for this client
+                            client_responses[fds[i].fd].append(single_response);
+
+                            //+ Erase ONLY the parsed request from the INBOUND buffer
+                            erase_request_from_buffer(client_buffers[fds[i].fd]);
+                        }
                         
-                        //+ 8. Sending the Response Setup
-                        //+ Once parsed, we tell poll() to wake us up when we can send data
-                        fds[i].events = POLLOUT;
+                        //+ If we generated any responses, switch to POLLOUT
+                        if (!client_responses[fds[i].fd].empty())
+                        {
+                            fds[i].events = POLLOUT;
+                        }
                     }
                 }
             }
-            //+ Sending the Response (Client is ready to receive)
+            //+ Scenario C: A Client Socket is Ready to WRITE (POLLOUT)
             else if (fds[i].revents & POLLOUT)
             {
-                //+ Push HTTP response to the client
-                // send(fds[i].fd, response, response_length, 0);
+                //+ Push our queued HTTP responses to the client
+                int sent_bytes = send(fds[i].fd, client_responses[fds[i].fd].c_str(), client_responses[fds[i].fd].length(), 0);
+                
+                if (sent_bytes > 0)
+                {
+                    //+ Erase only the bytes we actually managed to send
+                    client_responses[fds[i].fd].erase(0, sent_bytes);
+                }
 
-                //+ Transaction finished. Keep alive (switch back to POLLIN) OR Cleanup
-                fds[i].events = POLLIN; 
+                //+ If the outbound queue is completely empty, we are done sending.
+                if (client_responses[fds[i].fd].empty())
+                {
+                    //+ Switch back to listening for new incoming requests
+                    fds[i].events = POLLIN; 
+                }
             }
         }
     }
