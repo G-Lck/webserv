@@ -4,6 +4,10 @@
 #include "LocationConfig.hpp"
 #include <algortihm>
 
+/**
+ * @brief the type of privates attributs are maybe a little bit random
+ */
+ 
 class ServerConfig {
 	private:
 		std::vector<std::string>	_listen;
