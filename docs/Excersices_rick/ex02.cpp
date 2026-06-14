@@ -10,7 +10,7 @@
 #include <sys/socket.h> // socket(), bind(), listen(), accept(), send(), recv(), setsockopt()
 #include <netdb.h>      // getaddrinfo(), freeaddrinfo(), struct addrinfo
 #include <netinet/in.h> // struct sockaddr_in, htons(), htonl(), ntohs(), ntohl()
-#include <arpa/inet.h>  // inet_pton() (if you still need manual IP conversion)
+#include <sys/epoll.h> // epoll()
 
 // --- POSIX Multiplexing & System Calls ---
 #include <poll.h>       // poll(), struct pollfd, POLLIN, POLLOUT
@@ -32,7 +32,9 @@ typedef struct s_config
     std::string	error_page;		//404 error_pages/404.html;
 }	t_config;
 
-int	main()
+/// @brief Makes a new socket
+/// @return Returrns socket fd
+int	make_socket()
 {
 	//+ Fill my congif file struct
 	t_config config;
@@ -100,120 +102,124 @@ int	main()
 	//+ Apply non block to main socket
 	//~It forces functions like recv() and accept() to return an error immediately if there is no data, rather than freezing the program.
 	fcntl(fd_socket, F_SETFL, O_NONBLOCK);
+}
+#define MAX_EVENTS 64
 
-	//+ Persistent containers tying an FD to its leftover inbound and outbound data
-    std::map<int, std::string> client_buffers;    // Data received but not fully parsed
-    std::map<int, std::string> client_responses;  // Responses built but not fully sent
+int main()
+{
+    int fd_socket = make_socket();  
+    if (fd_socket == -1)
+        return (-1);
 
-    //+ Container for poll() to monitor
-    std::vector<struct pollfd> fds;
+    //+ Persistent containers tying an FD to its leftover inbound and outbound data
+    std::map<int, std::string> client_buffers;
+    std::map<int, std::string> client_responses;
 
-    //+ Add the main socket to the container BEFORE the loop
-    struct pollfd main_socket;
-    main_socket.fd = fd_socket;
-    main_socket.events = POLLIN; 
-    main_socket.revents = 0;
-    fds.push_back(main_socket);
+    //+ 1. Create the epoll instance
+    //~ The '1' is ignored by modern Linux, but must be > 0
+    int epoll_fd = epoll_create(1);
+    if (epoll_fd == -1)
+        return (-1);
+
+    //+ 2. Add the main socket to epoll to watch for new connections
+    struct epoll_event ev;
+    ev.events = EPOLLIN; 
+    ev.data.fd = fd_socket;
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd_socket, &ev) == -1)
+        return (-1);
+
+    //+ Array to hold the events that epoll_wait returns to us
+    struct epoll_event active_events[MAX_EVENTS];
 
     while (1)
     {
-        //+ Wait until an event occurs on ANY socket in our vector
-        //* &fds[0] is the standard way to pass vector data to a C function in C++98
-        if (poll(&fds[0], fds.size(), -1) == -1)
+        //+ 3. Wait for events. nfds is the EXACT number of active sockets.
+        int nfds = epoll_wait(epoll_fd, active_events, MAX_EVENTS, -1);
+        if (nfds == -1)
         {
-            std::cout << "poll error" << std::endl;
+            std::cout << "epoll_wait error" << std::endl;
             continue; 
         }
 
-        //+ Iterating Through the Results
-        for (size_t i = 0; i < fds.size(); ++i)
+        //+ 4. Iterate ONLY through the active sockets
+        for (int i = 0; i < nfds; ++i)
         {
-            //+ If revents is 0, nothing happened on this specific socket
-            if (fds[i].revents == 0)
-                continue;
+            int current_fd = active_events[i].data.fd;
 
-            //+ Is the socket ready to be read?
-            if (fds[i].revents & POLLIN)
+            //+ Scenario A: The Main Socket is Ready (New Connection)
+            if (current_fd == fd_socket)
             {
-                //+ 6. Scenario A: The Main Socket is Ready (New Connection)
-                if (fds[i].fd == fd_socket)
+                struct sockaddr_in  addr_client;
+                socklen_t           addr_size = sizeof(addr_client);
+                
+                int fd_client = accept(fd_socket, (struct sockaddr *)&addr_client, &addr_size);
+                if (fd_client == -1)
+                    continue;
+
+                fcntl(fd_client, F_SETFL, O_NONBLOCK);
+
+                //+ Add new client to epoll
+                struct epoll_event client_ev;
+                client_ev.events = EPOLLIN; // Watch for incoming HTTP requests
+                client_ev.data.fd = fd_client;
+                epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd_client, &client_ev);
+            }
+            //+ Scenario B: A Client Socket is Ready to READ (EPOLLIN)
+            else if (active_events[i].events & EPOLLIN)
+            {
+                char buffer[4096];
+                int bytes_read = recv(current_fd, buffer, sizeof(buffer), 0);
+
+                //+ Cleanup: Client disconnected or error
+                if (bytes_read <= 0)
                 {
-                    struct sockaddr_in  addr_client;
-                    socklen_t           addr_size = sizeof(addr_client);
-                    
-                    int fd_client = accept(fd_socket, (struct sockaddr *)&addr_client, &addr_size);
-                    if (fd_client == -1)
-                        continue;
-
-                    //+ Apply non-block to this new client
-                    fcntl(fd_client, F_SETFL, O_NONBLOCK);
-
-                    //+ Add to Container
-                    struct pollfd new_client;
-                    new_client.fd = fd_client;
-                    new_client.events = POLLIN; 
-                    new_client.revents = 0;
-                    fds.push_back(new_client);
+                    //~ ALWAYS remove from epoll before closing the FD
+                    epoll_ctl(epoll_fd, EPOLL_CTL_DEL, current_fd, NULL);
+                    close(current_fd);
+                    client_buffers.erase(current_fd);
+                    client_responses.erase(current_fd);
                 }
-                //+ Scenario B: A Client Socket is Ready (Incoming Request)
                 else
                 {
-                    char buffer[4096];
-                    int bytes_read = recv(fds[i].fd, buffer, sizeof(buffer), 0);
+                    client_buffers[current_fd].append(buffer, bytes_read);
 
-                    //+ Cleanup: Client disconnected or error
-                    if (bytes_read <= 0)
+                    while (request_is_complete(client_buffers[current_fd]))
                     {
-                        close(fds[i].fd);
-                        client_buffers.erase(fds[i].fd);   //~ Prevent memory leaks
-                        client_responses.erase(fds[i].fd); //~ Prevent memory leaks
-                        fds.erase(fds.begin() + i);
-                        --i; //~ Adjust iterator since vector shrank
-                    }
-                    else
-                    {
-                        //+ 1. Append raw bytes to this client's persistent string
-                        client_buffers[fds[i].fd].append(buffer, bytes_read);
-
-                        //+ 2. Process ALL complete requests trapped in the string
-                        while (request_is_complete(client_buffers[fds[i].fd]))
-                        {
-                            //+ Extract, parse, and build response (You implement these)
-                            std::string single_request = extract_request(client_buffers[fds[i].fd]);
-                            std::string single_response = process_and_build_response(single_request);
-
-                            //+ Append response to OUTBOUND queue for this client
-                            client_responses[fds[i].fd].append(single_response);
-
-                            //+ Erase ONLY the parsed request from the INBOUND buffer
-                            erase_request_from_buffer(client_buffers[fds[i].fd]);
-                        }
+                        std::string single_request = extract_request(client_buffers[current_fd]);
+                        std::string single_response = process_and_build_response(single_request);
                         
-                        //+ If we generated any responses, switch to POLLOUT
-                        if (!client_responses[fds[i].fd].empty())
-                        {
-                            fds[i].events = POLLOUT;
-                        }
+                        client_responses[current_fd].append(single_response);
+                        erase_request_from_buffer(client_buffers[current_fd]);
+                    }
+                    
+                    //+ If we generated any responses, modify epoll to watch for EPOLLOUT
+                    if (!client_responses[current_fd].empty())
+                    {
+                        struct epoll_event mod_ev;
+                        mod_ev.events = EPOLLOUT; 
+                        mod_ev.data.fd = current_fd;
+                        epoll_ctl(epoll_fd, EPOLL_CTL_MOD, current_fd, &mod_ev);
                     }
                 }
             }
-            //+ Scenario C: A Client Socket is Ready to WRITE (POLLOUT)
-            else if (fds[i].revents & POLLOUT)
+            //+ Scenario C: A Client Socket is Ready to WRITE (EPOLLOUT)
+            else if (active_events[i].events & EPOLLOUT)
             {
-                //+ Push our queued HTTP responses to the client
-                int sent_bytes = send(fds[i].fd, client_responses[fds[i].fd].c_str(), client_responses[fds[i].fd].length(), 0);
+                int sent_bytes = send(current_fd, client_responses[current_fd].c_str(), client_responses[current_fd].length(), 0);
                 
                 if (sent_bytes > 0)
                 {
-                    //+ Erase only the bytes we actually managed to send
-                    client_responses[fds[i].fd].erase(0, sent_bytes);
+                    client_responses[current_fd].erase(0, sent_bytes);
                 }
 
                 //+ If the outbound queue is completely empty, we are done sending.
-                if (client_responses[fds[i].fd].empty())
+                if (client_responses[current_fd].empty())
                 {
                     //+ Switch back to listening for new incoming requests
-                    fds[i].events = POLLIN; 
+                    struct epoll_event mod_ev;
+                    mod_ev.events = EPOLLIN; 
+                    mod_ev.data.fd = current_fd;
+                    epoll_ctl(epoll_fd, EPOLL_CTL_MOD, current_fd, &mod_ev);
                 }
             }
         }
