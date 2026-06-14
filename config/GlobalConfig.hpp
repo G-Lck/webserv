@@ -2,6 +2,7 @@
 #define GLOBALCONFIG_HPP
 
 #include "ServerConfig.hpp"
+#include "WebServ.hpp"
 
 /**
  * @brief the type of privates attributs are maybe a little bit random

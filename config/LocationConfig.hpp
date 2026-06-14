@@ -1,6 +1,8 @@
 #ifndef LOCATIONCONFIG_HPP
 #define LOCATIONCONFIG_HPP
 
+#include "WebServ.hpp"
+
 /**
  * @brief the type of privates attributs are maybe a little bit random
  */

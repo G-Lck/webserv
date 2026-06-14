@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>404 - Webserv</title>
+<style>
+:root {
+--bg: #ffffff;
+--text: #2b2725;
+--brick: #b5522d;
+--brick-dark: #8f3f24;
+--beige: #efe2d2;
+--beige-2: #f7efe4;
+--line: #e5d5c2;
+}
+* { box-sizing: border-box; }
+body {
+margin: 0;
+font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+color: var(--text);
+background:
+radial-gradient(circle at 10% 0%, var(--beige-2) 0%, transparent 40%),
+radial-gradient(circle at 90% 100%, #f3e7d8 0%, transparent 35%),
+var(--bg);
+min-height: 100vh;
+}
+.wrap {
+max-width: 1100px;
+margin: 0 auto;
+padding: 32px 20px 48px;
+}
+.hero {
+border: 1px solid var(--line);
+border-radius: 16px;
+background: linear-gradient(135deg, #fff 0%, var(--beige-2) 100%);
+padding: 28px 24px;
+position: relative;
+overflow: hidden;
+min-height: 160px;
+}
+.big404 {
+font-size: clamp(6rem, 20vw, 10rem);
+font-weight: 700;
+color: var(--brick-dark);
+opacity: 0.12;
+line-height: 1;
+position: absolute;
+right: 24px;
+top: 50%;
+transform: translateY(-50%);
+pointer-events: none;
+user-select: none;
+}
+.content { position: relative; z-index: 1; }
+.hero h1 {
+margin: 8px 0;
+font-size: clamp(2rem, 4vw, 3rem);
+line-height: 1;
+letter-spacing: 0.02em;
+color: var(--brick-dark);
+}
+.hero p { margin: 0; font-size: 1rem; color: #5e5149; }
+.pill {
+display: inline-block;
+background: #fff3eb;
+color: var(--brick-dark);
+border: 1px solid #efc8b0;
+font-size: 0.75rem;
+font-weight: 600;
+border-radius: 999px;
+padding: 4px 8px;
+}
+.back {
+margin-top: 20px;
+display: inline-flex;
+align-items: center;
+gap: 8px;
+color: var(--brick-dark);
+font-weight: 600;
+font-size: 0.95rem;
+text-decoration: none;
+border: 1px solid #efc8b0;
+border-radius: 8px;
+padding: 8px 16px;
+background: #fff3eb;
+transition: background 0.18s;
+}
+.back:hover { background: #ffe8d6; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <section class="hero">
+    <div class="big404">404</div>
+    <div class="content">
+      <span class="pill">Error</span>
+      <h1>Page not found</h1>
+      <p>The resource you requested doesn't exist on this server.</p>
+      <a class="back" href="./index.html">← Back to home</a>
+    </div>
+  </section>
+</main>
+</body>
+</html>

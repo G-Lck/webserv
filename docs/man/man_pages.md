@@ -909,158 +909,174 @@ Each function returns the converted value.
 
 ## man: `epoll`
 
-### Purpose
+`epoll` is how you watch hundreds of sockets at once without melting your CPU.
+The old way (`select`, `poll`) looped through every fd every time. `epoll` only
+tells you about the ones that are actually ready.
 
-Monitor many file descriptors for I/O readiness (Linux-specific), with good scalability for large numbers of watched descriptors.
+---
 
-### Synopsis
+# The three calls you need
 
-```cpp
-#include <sys/epoll.h>
+## epoll_create1
 
-int epoll_create(int size);
-int epoll_create1(int flags);
-int epoll_ctl(int epfd, int op, int fd, struct epoll_event *event);
-int epoll_wait(int epfd, struct epoll_event *events, int maxevents, int timeout);
+```c
+int epfd = epoll_create1(0);
 ```
 
-### Core idea
+Creates the epoll object. Think of it as a list you're going to fill with fds
+to watch. Returns a fd itself — close it when you're done.
 
-The epoll API is conceptually close to poll(), but with a different kernel model:
+---
 
-- Interest list: descriptors you registered
-- Ready list: subset currently ready for I/O
+## epoll_ctl
 
-Main syscalls:
+```c
+epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &event);
+```
 
-- **epoll_create1()** creates an epoll instance (returns an fd)
-- **epoll_ctl()** adds/modifies/removes watched descriptors
-- **epoll_wait()** waits for events and returns ready descriptors
+Adds, changes, or removes an fd from your watch list.
 
-### Data structures
+**Second argument:**
 
-```cpp
+- `EPOLL_CTL_ADD` — start watching this fd
+- `EPOLL_CTL_MOD` — change what you're watching for
+- `EPOLL_CTL_DEL` — stop watching it
+
+**The event struct:**
+
+```c
+struct epoll_event ev;
+ev.events  = EPOLLIN;   /* tell me when there's data to read */
+ev.data.fd = fd;        /* this comes back to you in epoll_wait */
+```
+
+Common flags for `events`:
+
+- `EPOLLIN` — ready to read
+- `EPOLLOUT` — ready to write
+- `EPOLLET` — edge-triggered (see below)
+
+epoll_event struct
+ 
+This is what the kernel gives you and what you fill before calling `epoll_ctl`.
+ 
+```c
 typedef union epoll_data {
-    void *ptr;
-    int fd;
-    uint32_t u32;
-    uint64_t u64;
+    void     *ptr;  /* pointer to your own struct with connection info */
+    int       fd;   /* simplest — just store the fd directly */
+    uint32_t  u32;
+    uint64_t  u64;
 } epoll_data_t;
-
+ 
 struct epoll_event {
-    uint32_t events; // epoll flags
-    epoll_data_t data;
+    uint32_t     events;  /* bitmask: EPOLLIN, EPOLLOUT, EPOLLET... */
+    epoll_data_t data;    /* comes back to you unchanged in epoll_wait */
 };
 ```
+ 
+### events bitmask
+ 
+```c
+EPOLLIN       /* ready to read */
+EPOLLOUT      /* ready to write */
+EPOLLERR      /* error on fd (always watched, even if not set) */
+EPOLLHUP      /* hangup (client disconnected) */
+EPOLLET       /* edge-triggered mode */
+EPOLLONESHOT  /* fire once, re-arm manually with EPOLL_CTL_MOD */
+```
+ 
+### data union — pick one
+ 
+```c
+ev.data.fd  = client_fd;   /* use this for simple cases */
+ev.data.ptr = &my_struct;  /* use this when you need more context */
+```
+ 
+You only use one member of the union at a time. Most of the time `data.fd` is enough.
+ 
+### Full usage
+ 
+```c
+struct epoll_event ev;
+ 
+ev.events  = EPOLLIN | EPOLLET;
+ev.data.fd = client_fd;
+ 
+epoll_ctl(epfd, EPOLL_CTL_ADD, client_fd, &ev);
+```
 
-### epoll_create1 flags
+---
 
-| Flag | Description |
-|---|---|
-| **EPOLL_CLOEXEC** | Set close-on-exec on epoll fd (like O_CLOEXEC). |
+## epoll_wait
 
-### epoll_ctl operations
+```c
+int n = epoll_wait(epfd, events, MAX_EVENTS, -1);
+```
 
-| op | Description |
-|---|---|
-| **EPOLL_CTL_ADD** | Add fd to interest list. |
-| **EPOLL_CTL_MOD** | Modify event mask/data for an existing fd. |
-| **EPOLL_CTL_DEL** | Remove fd from interest list. |
+Blocks until something happens. Returns how many fds are ready.
+The kernel fills your `events` array with only the ready ones — no scanning.
 
-### Event flags (events / revents)
+- timeout `-1` = wait forever
+- timeout `0`  = check and return immediately
+- timeout `N`  = wait N milliseconds
 
-| Flag | Description |
-|---|---|
-| **EPOLLIN** | Readable data available. |
-| **EPOLLOUT** | Writable without blocking. |
-| **EPOLLPRI** | Urgent/OOB data available. |
-| **EPOLLERR** | Error condition (always reported). |
-| **EPOLLHUP** | Hang up detected. |
-| **EPOLLRDHUP** | Peer closed read-half (useful for TCP). |
-| **EPOLLET** | Edge-triggered mode. |
-| **EPOLLONESHOT** | Disable fd after one event until re-armed with MOD. |
-| **EPOLLWAKEUP** | Keep system awake while processing event (power-management use case). |
+---
 
-### Level-triggered vs Edge-triggered
+### Putting it together
 
-- Default (no EPOLLET): level-triggered, behavior close to poll().
-- With EPOLLET: edge-triggered, event delivered on state transitions.
+```c
+#define MAX_EVENTS 64
 
-Important rule in edge-triggered mode:
+int epfd = epoll_create1(0);
 
-- Use non-blocking fds.
-- Read/write in a loop until read()/write() returns EAGAIN.
+struct epoll_event ev;
+ev.events  = EPOLLIN;
+ev.data.fd = server_fd;
+epoll_ctl(epfd, EPOLL_CTL_ADD, server_fd, &ev);
 
-If you do partial reads and stop too early, epoll_wait() can sleep while data is still buffered.
+struct epoll_event events[MAX_EVENTS];
 
-### Return Value
-
-#### epoll_create / epoll_create1
-
-- New epoll fd on success
-- -1 on error (errno set)
-
-#### epoll_ctl
-
-- 0 on success
-- -1 on error (errno set)
-
-#### epoll_wait
-
-- Number of ready events (> 0)
-- 0 on timeout
-- -1 on error (errno set)
-
-### Example (typical server loop)
-
-```cpp
-#define MAX_EVENTS 10
-
-struct epoll_event ev, events[MAX_EVENTS];
-int listen_sock, conn_sock, epollfd, nfds, n;
-
-// socket(), bind(), listen() done before this point.
-
-epollfd = epoll_create1(0);
-if (epollfd == -1) {
-    perror("epoll_create1");
-    exit(EXIT_FAILURE);
-}
-
-ev.events = EPOLLIN;
-ev.data.fd = listen_sock;
-if (epoll_ctl(epollfd, EPOLL_CTL_ADD, listen_sock, &ev) == -1) {
-    perror("epoll_ctl: listen_sock");
-    exit(EXIT_FAILURE);
-}
-
-for (;;) {
-    nfds = epoll_wait(epollfd, events, MAX_EVENTS, -1);
-    if (nfds == -1) {
+while (1)
+{
+    int n = epoll_wait(epfd, events, MAX_EVENTS, -1);
+    if (n == -1)
+    {
+        if (errno == EINTR) continue; /* signal interrupted us, just retry */
         perror("epoll_wait");
-        exit(EXIT_FAILURE);
+        break;
     }
-
-    for (n = 0; n < nfds; ++n) {
-        if (events[n].data.fd == listen_sock) {
-            conn_sock = accept(listen_sock, NULL, NULL);
-            if (conn_sock == -1) {
-                perror("accept");
-                continue;
-            }
-
-            // setnonblocking(conn_sock);
-            ev.events = EPOLLIN | EPOLLET;
-            ev.data.fd = conn_sock;
-            if (epoll_ctl(epollfd, EPOLL_CTL_ADD, conn_sock, &ev) == -1) {
-                perror("epoll_ctl: conn_sock");
-                close(conn_sock);
-            }
-        } else {
-            // do_use_fd(events[n].data.fd);
-        }
+    for (int i = 0; i < n; i++)
+    {
+        if (events[i].events & EPOLLIN)
+            handle_read(events[i].data.fd);
+        if (events[i].events & EPOLLOUT)
+            handle_write(events[i].data.fd);
     }
 }
 ```
+
+---
+
+## Level-triggered vs edge-triggered
+
+By default epoll is **level-triggered**: as long as there's unread data in the
+buffer, `epoll_wait` keeps telling you about it on every call. Safe and simple.
+
+With `EPOLLET` (edge-triggered) it only tells you once — when new data arrives.
+If you don't read everything in one shot, you'll never hear about it again.
+
+For webserv, stick with level-triggered. Edge-triggered is faster but you need
+non-blocking fds and a full drain loop to not lose data.
+
+---
+
+## Things that will bite you
+
+- Always set `O_NONBLOCK` on your fds before adding them to epoll.
+- `epoll_wait` returns `-1` when a signal hits — check `errno == EINTR` and retry.
+- `data` in the event struct is a union. Use `data.fd` to store the fd or
+  `data.ptr` to point to a struct with more context about the connection.
+
+---
 
 [↑ Back to top](#table-des-matieres)

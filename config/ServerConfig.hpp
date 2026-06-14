@@ -2,7 +2,7 @@
 #define SERVERCONFIG_HPP
 
 #include "LocationConfig.hpp"
-#include <algortihm>
+#include "WebServ.hpp"
 
 /**
  * @brief the type of privates attributs are maybe a little bit random
