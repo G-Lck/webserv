@@ -12,22 +12,11 @@ void Socket::setConfig( void )
 
 // --- Orthodox ---
 
-Socket::Socket() {}
-Socket::~Socket() {}
-Socket::Socket( Socket const &other ) : _status(other._status), _fd(other._fd), _hints(other._hints), _socket(other._socket) {}
-Socket &Socket::operator=( Socket const &other )
-{
-	if (this != &other)
-	{
-		_status = other._status;
-		_fd = other._fd;
-		_hints = other._hints;
-		_socket = other._socket;
-	}
-	return ( *this );
-}
+Socket::Socket() : _fd(-1) { memset(&(this->_hints), 0, sizeof this->_hints); }
+Socket::~Socket() { this->closeFd(); }
 
 // --- Exceptions ---
+
 Socket::runtimeSocketException::runtimeSocketException(const char* message) : std::runtime_error(message) {}
 
 // --- Socket creation (in execution order) ---
@@ -114,8 +103,12 @@ void	Socket::makeSocket( void )
 	this->socketSetNonBlock();
 }
 
+// --- Helpers ---
+
 /// @brief	Close the file descriptor attached to this Socket.
-void	Socket::closeFd( void ) { close(this->_fd); }
+void	Socket::closeFd( void ) { if (this->_fd != -1) { close(this->_fd); this->setFd(-1); } }
 
 int		Socket::getFd( void ) { return (this->_fd); }
+
+void	Socket::setFd( int n ) { this->_fd = n; }
 

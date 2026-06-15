@@ -6,7 +6,9 @@ FLAGS = -Wall -Werror -g -Wextra -std=c++98
 
 SRC = \
 		main.cpp \
-		srcs/server/Socket.cpp
+		srcs/server/Socket.cpp \
+		srcs/server/Server.cpp \
+		srcs/utils/requestAndResponse.cpp
 
 OBJ = $(SRC:.cpp=.o)
 

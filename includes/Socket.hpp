@@ -23,11 +23,11 @@ class	Socket
 		struct addrinfo		_hints;
 		struct addrinfo*	_socket;
 		t_config			_config;
+		Socket( Socket const &other );
+		Socket &operator=( Socket const &other );
 	public:
 		Socket();
 		~Socket();
-		Socket( Socket const &other );
-		Socket &operator=( Socket const &other );
 
 		class runtimeSocketException : public std::runtime_error 
 		{
@@ -47,10 +47,11 @@ class	Socket
 		void	socketListen( void );
 		void	socketSetNonBlock( void );
 		void	makeSocket( void );
-		void	closeFd( void );
 
-		//+ --- Getters / Setters ---
+		//+ --- Getters / Setters / Helpers ---
 		int		getFd( void );
+		void	setFd( int n );
+		void	closeFd( void );
 };
 
 #endif

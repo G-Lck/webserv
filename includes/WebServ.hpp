@@ -18,17 +18,19 @@
 #include <map>			// std::map
 #include <stdexcept>	// exceptions
 #include <algorithm>
+#include <cerrno>  		// Required to read the 'errno' variable
+#include <cstring> 		// Required for strerror()
 
 // --- POSIX Sockets & Network ---
 #include <sys/socket.h> // socket(), bind(), listen(), accept(), send(), recv(), setsockopt()
 #include <netdb.h>      // getaddrinfo(), freeaddrinfo(), struct addrinfo
 #include <netinet/in.h> // struct sockaddr_in, htons(), htonl(), ntohs(), ntohl()
-#include <sys/epoll.h> // epoll()
 
 // --- POSIX Multiplexing & System Calls ---
 #include <poll.h>       // poll(), struct pollfd, POLLIN, POLLOUT
 #include <fcntl.h>      // fcntl(), F_SETFL, O_NONBLOCK
 #include <unistd.h>     // close(), read(), write(), fork(), execve(), pipe(), dup2()
+#include <sys/epoll.h> 	// epoll()
 
 // --- POSIX File System & CGI ---
 #include <sys/stat.h>   // stat() (to check if an HTML file exists before serving)
@@ -38,5 +40,6 @@
 
 #include "Socket.hpp"
 #include "Server.hpp"
+#include "utils.hpp"
 
 #endif

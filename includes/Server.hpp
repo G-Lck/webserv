@@ -8,17 +8,17 @@
 class	Server
 {
 	private:
-		std::vector<Socket>			_sockets;
+		std::vector<Socket*>		_sockets;
 		std::map<int, std::string>	_client_buffers;
 		std::map<int, std::string>	_client_responses;
 		int							_epoll_fd;
 		struct epoll_event			_event;
 		struct epoll_event			_active_events[MAX_EVENTS];
+		Server( Server const &other );
+		Server &operator=( Server const &other );
 	public:
 		Server();
 		~Server();
-		Server( Server const &other );
-		Server &operator=( Server const &other );
 
 		class runtimeServerException : public std::runtime_error 
 		{
@@ -26,13 +26,20 @@ class	Server
 				runtimeServerException(const char* message);
 		};
 
-		void	addSocket( Socket &S );
-		void	epolInit( void );
-		void	epollEvent( void );
+		void	addSocket( Socket *S );
+		void	epollInit( void );
+		void	epollAddSockets( void );
 		void	closeSockets( void );
 		void	closeEpoll( void );
 
 		void	initServer( void );
+		bool	fdMatch( int curr );
+		bool	addNewClient( int curr_socket_fd );
+		void	clientDisconnect( int fd );
+		void	setEpollInOut( int fd, int Flag );
+		void	handleCompleteRequest( int fd );
+		void	readRequest( int fd );
+		void	sendResponse( int fd );
 };
 
 #endif
