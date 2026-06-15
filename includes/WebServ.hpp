@@ -41,5 +41,6 @@
 #include "Socket.hpp"
 #include "Server.hpp"
 #include "utils.hpp"
+#include "HttpRequest.hpp"
 
 #endif

@@ -1,6 +1,5 @@
 #include "../../includes/utils.hpp"
 
-//+ 1. Pass by reference!
 bool request_is_complete(std::map<int, std::string>& client_buffers, int key)
 {
     //+ Every valid HTTP request headers section ends with "\r\n\r\n"
@@ -9,14 +8,12 @@ bool request_is_complete(std::map<int, std::string>& client_buffers, int key)
     return false;
 }
 
-//+ 2. Pass by reference!
 std::string extract_request(std::map<int, std::string>& client_buffers, int key)
 {
     //+ For testing, just grab whatever is in the buffer
     return client_buffers[key];
 }
 
-//+ 3. Pass by value is fine here, it's just one string
 std::string process_and_build_response(std::string single_request)
 {
     //+ Print what the browser sent us to the terminal
@@ -32,7 +29,6 @@ std::string process_and_build_response(std::string single_request)
     return dummy_response;
 }                     
 
-//+ 4. Pass by reference!
 void erase_request_from_buffer(std::map<int, std::string>& client_buffers, int key)
 {
     //+ For testing, just wipe the entire buffer clean so we don't infinite loop

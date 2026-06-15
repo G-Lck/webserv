@@ -49,8 +49,11 @@ But we have to do the job of Apache or Nginx (web server software).
 - je crois que les problemes d'ipv4 et ipv6 sont gérés par `getaddrinfo`. Si ce n'est pas le cas voir https://beej.us/guide/bgnet/ chap3.
 - We will have to be careful to use the convert functions when we send or receive.
 
-### Ressources
+## Ressources
+### Man pages explained by a human
 - https://beej.us/guide/bgnet/
+### Http Format rules
+- https://datatracker.ietf.org/doc/html/rfc2616
 
 ## poll, select, epoll and non-blocking probleme
 ### Key Notions
