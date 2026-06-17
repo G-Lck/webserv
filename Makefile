@@ -8,7 +8,12 @@ SRC = \
 		main.cpp \
 		srcs/server/Socket.cpp \
 		srcs/server/Server.cpp \
-		srcs/utils/requestAndResponse.cpp
+		srcs/utils/requestAndResponse.cpp \
+		srcs/config/GlobalConfig.cpp \
+		srcs/config/ServerConfig.cpp \
+		srcs/config/LocationConfig.cpp \
+		srcs/client/Client.cpp \
+		srcs/requests/HttpRequest.cpp
 
 OBJ = $(SRC:.cpp=.o)
 

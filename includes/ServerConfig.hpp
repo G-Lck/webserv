@@ -1,7 +1,6 @@
 #ifndef SERVERCONFIG_HPP
 #define SERVERCONFIG_HPP
 
-#include "LocationConfig.hpp"
 #include "WebServ.hpp"
 
 /**
@@ -24,6 +23,8 @@ class ServerConfig {
 		ServerConfig(const ServerConfig& other);
 		ServerConfig& operator=(const ServerConfig& other);
 		~ServerConfig();
+
+		const std::string&	getListen(unsigned int i) const;
 };
 
 #endif

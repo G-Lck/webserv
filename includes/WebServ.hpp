@@ -42,5 +42,9 @@
 #include "Server.hpp"
 #include "utils.hpp"
 #include "HttpRequest.hpp"
+#include "LocationConfig.hpp"
+#include "ServerConfig.hpp"
+#include "GlobalConfig.hpp"
+#include "Client.hpp"
 
 #endif
