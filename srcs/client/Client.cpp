@@ -1,38 +1,26 @@
 #include "../../includes/Client.hpp"
 
-Client::Client()
-{
-	std::cout << "Client default constructor called" << std::endl;
-}
+// ------- Orthodox --------
 
-Client::Client(const Client& other)
-{
-	std::cout << "Client copy constructor called" << std::endl;
-	*this = other;
-}
+Client::Client() : _fd(-1) { std::cout << "Client default constructor called" << std::endl; }
 
-Client& Client::operator=(const Client& other)
-{
-	std::cout << "Client operator = called" << std::endl;
-	if (this != &other) {
-		this->_fd = other._fd;
-		this->_read_buffer = other._read_buffer;
-		this->_write_buffer = other._write_buffer;
-	}
-	return *this;
-}
+Client::Client( int fd ) : _fd(fd) { };
 
-Client::~Client() {}
+Client::~Client() { }
+
+// ------- Getters --------
 
 const std::string&	Client::getReadBuffer()	const
 {
 	return (this->_read_buffer);
 }
 
-const std::string&	Client::getWriteBuffer()	const
+const std::string&	Client::getWriteBuffer() const
 {
 	return (this->_write_buffer);
 }
+
+// ------- Member variable manipulation --------
 
 void	Client::appendToReadBuffer(const char* data, size_t len)
 {

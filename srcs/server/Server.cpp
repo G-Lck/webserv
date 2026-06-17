@@ -158,6 +158,7 @@ bool    Server::fdMatch( int curr )
 ///			 the client fd and data is added to epoll.
 ///			 The epoll_event is then destroyed localy.
 ///			 The fd of the new client is stored inside a member var for later safe checks.
+///			 Finally a new Client is allocated calling the Parameter Constructor taking only the fd
 bool	Server::addNewClient( int curr_socket_fd )
 {
 	struct sockaddr_in  addr_client;
@@ -177,6 +178,8 @@ bool	Server::addNewClient( int curr_socket_fd )
 	client_ev.events = EPOLLIN;
 	client_ev.data.fd = fd_client;
 	epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, fd_client, &client_ev);
+	Client *newClient = new Client(fd_client);
+	this->_clients.insert(std::make_pair(fd_client, newClient));
 	return (true);
 }
 
@@ -195,8 +198,9 @@ void	Server::readRequest( int fd )
 		this->clientDisconnect(fd);
 	else
 	{
-		this->_client_buffers[fd].append(buffer, bytes_read);
-		while (request_is_complete(this->_client_buffers, fd))
+		Client* c = _clients[fd];
+		c->appendToReadBuffer(buffer, bytes_read);
+		while (request_is_complete(c))
 			this->handleCompleteRequest(fd);
 	}
 }
@@ -209,9 +213,15 @@ void	Server::clientDisconnect( int fd )
 {
 	epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
 	close(fd);
-	this->_client_buffers.erase(fd);
-	this->_client_responses.erase(fd);
 	this->_fd_to_route.erase(fd);
+
+	// Check before errasing
+	std::map<int, Client*>::iterator it = this->_clients.find(fd);
+	if (it != this->_clients.end())
+	{
+		delete it->second;
+		this->_clients.erase(it);
+	}
 }
 
 /// @brief  Extracts and processes a single, complete HTTP request from a client's buffer.
@@ -220,20 +230,21 @@ void	Server::clientDisconnect( int fd )
 /// @param fd The client socket file descriptor.
 void    Server::handleCompleteRequest( int fd )
 {
+	Client* c = _clients[fd];
     //+ 1. Isolate the first complete request from the persistent string (handles pipelining)
-    std::string single_request = extract_request(this->_client_buffers, fd);
+    std::string single_request = extract_request(c);
     
     //+ 2. Parse the HTTP, find the file/CGI, and build the full string response
-    std::string single_response = process_and_build_response(single_request);
+    std::string single_response = process_and_build_response(c);
             
     //+ 3. Push the response to the outbound waiting line
-    this->_client_responses[fd].append(single_response);
+    c->appendToWriteBuffer(single_response);
     
     //+ 4. Delete only the parsed request, leaving any leftover bytes for the next cycle
-    erase_request_from_buffer(this->_client_buffers, fd);
+    erase_request_from_buffer(c);
     
     //+ 5. Wake up epoll_wait and tell it we want to write to this client
-    if (!this->_client_responses[fd].empty())
+    if (!c->getWriteBuffer().empty())
         this->setEpollInOut(fd, EPOLLOUT);
 }
 
@@ -257,15 +268,15 @@ void	Server::setEpollInOut( int fd, int flag )
 
 void	Server::sendResponse( int fd )
 {
-    int sent_bytes = send(fd, this->_client_responses[fd].c_str(), this->_client_responses[fd].length(), 0);
+    Client* c = _clients[fd];
+    int sent_bytes = send(fd, c->getWriteBuffer().c_str(), c->getWriteBuffer().length(), 0);
 
     if (sent_bytes <= 0)
     {
         this->clientDisconnect(fd);
         return ;
     }
-
-    this->_client_responses[fd].erase(0, sent_bytes);   
-    if (this->_client_responses[fd].empty())
+    c->eraseWriteBuffer(sent_bytes);
+    if (c->getWriteBuffer().empty())
         this->setEpollInOut(fd, EPOLLIN);
 }

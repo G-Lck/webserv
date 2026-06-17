@@ -5,6 +5,7 @@
 
 #include "WebServ.hpp"
 #include "Socket.hpp"
+#include "Client.hpp"
 #include "Types.hpp"
 #include "GlobalConfig.hpp"
 
@@ -13,8 +14,7 @@ class	Server
 	private:
 		int							_epoll_fd;
 		std::map<int, Socket*>		_sockets;
-		std::map<int, std::string>	_client_buffers;
-		std::map<int, std::string>	_client_responses;
+		std::map<int, Client*> 		_clients;
 		struct epoll_event			_event;
 		struct epoll_event			_active_events[MAX_EVENTS];
 		t_virtualServer				_virtualServers;
@@ -26,11 +26,15 @@ class	Server
 		//+ --- Internal functionallity ---
 		void	addSocket( Socket *S );
 		void	closeSockets( void );
+		
 		void	closeEpoll( void );
+		void	setEpollInOut( int fd, int Flag );
+		
 		bool	fdMatch( int curr );
 		bool	addNewClient( int curr_socket_fd );
+		void	closeClient( void );
 		void	clientDisconnect( int fd );
-		void	setEpollInOut( int fd, int Flag );
+		
 		void	handleCompleteRequest( int fd );
 		void	readRequest( int fd );
 		void	sendResponse( int fd );

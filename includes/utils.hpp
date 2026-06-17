@@ -1,14 +1,17 @@
 #ifndef UTILS_HPP
 # define UTILS_HPP
 
+#include "Client.hpp"
 #include "WebServ.hpp"
 
-bool		request_is_complete(std::map<int, std::string> &client_buffers, int key);
+class Client;
 
-std::string	extract_request(std::map<int, std::string> &client_buffers, int key);
+bool		request_is_complete( Client *client );
 
-std::string	process_and_build_response(std::string single_request);                     
+std::string	extract_request( Client *client );
 
-void		erase_request_from_buffer(std::map<int, std::string> &client_buffers, int key);
+std::string	process_and_build_response( Client *client );                     
+
+void		erase_request_from_buffer( Client *client );
    
 #endif

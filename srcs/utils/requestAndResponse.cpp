@@ -1,36 +1,32 @@
 #include "../../includes/utils.hpp"
 
-bool request_is_complete(std::map<int, std::string>& client_buffers, int key)
+bool request_is_complete(Client* client)
 {
-    //+ Every valid HTTP request headers section ends with "\r\n\r\n"
-    if (client_buffers[key].find("\r\n\r\n") != std::string::npos)
+    if (client->getReadBuffer().find("\r\n\r\n") != std::string::npos)
         return true;
     return false;
 }
 
-std::string extract_request(std::map<int, std::string>& client_buffers, int key)
+std::string extract_request(Client* client)
 {
-    //+ For testing, just grab whatever is in the buffer
-    return client_buffers[key];
+    return client->getReadBuffer();
 }
 
-std::string process_and_build_response(std::string single_request)
+std::string process_and_build_response(Client* client)
 {
-    //+ Print what the browser sent us to the terminal
+    std::string single_request = client->getWriteBuffer();
     std::cout << "\n--- NEW REQUEST RECEIVED ---\n" << single_request << "----------------------------\n" << std::endl;
 
-    //+ Hardcode a perfectly valid HTTP/1.1 response
-    std::string dummy_html = "<html><body><h1>Hello from epoll!</h1></body></html>";
+    std::string dummy_html = "<html><body><h1>Hello from Client Object!</h1></body></html>";
     std::string dummy_response = "HTTP/1.1 200 OK\r\n"
                                  "Content-Type: text/html\r\n"
-                                 "Content-Length: 52\r\n"
+                                 "Content-Length: 58\r\n"
                                  "\r\n" + dummy_html;
                                  
     return dummy_response;
 }                     
 
-void erase_request_from_buffer(std::map<int, std::string>& client_buffers, int key)
+void erase_request_from_buffer(Client* client)
 {
-    //+ For testing, just wipe the entire buffer clean so we don't infinite loop
-    client_buffers[key].clear();
+    client->clearReadBuffer();
 }

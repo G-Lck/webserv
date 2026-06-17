@@ -3,19 +3,23 @@
 
 #include "WebServ.hpp"
 
-class Client {
+class Client
+{
 	private:
 		int			_fd;
+		time_t 		_last_activity;
 		std::string	_read_buffer;
 		std::string	_write_buffer;
 
-	public:
-		Client();
 		Client(const Client& other);
 		Client& operator=(const Client& other);
+
+	public:
+		Client();
+		Client( int fd );
 		~Client();
 
-	const std::string&	getReadBuffer()	const;
+	const std::string&	getReadBuffer()		const;
 	const std::string&	getWriteBuffer()	const;
 
 	void	appendToReadBuffer(const char* data, size_t len);
@@ -23,7 +27,6 @@ class Client {
 	void	eraseWriteBuffer(size_t n);
 	void	clearReadBuffer();
 	void	clearWriteBuffer();
-
-	};
+};
 
 #endif
