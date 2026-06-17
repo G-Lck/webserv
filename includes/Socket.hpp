@@ -1,19 +1,9 @@
 #ifndef SOCKET_HPP
 # define SOCKET_HPP
 
-#define BACKLOG 10
+#define BACKLOG 10 //+ Check socketListen()
 
-//* FOR NOW IM USING THIS, UNTIL I HAVE YOUR CONFIG, WE CAN TALK ABOUT WHAT WE NEED AFTER
-typedef struct s_config
-{
-    std::string listen;					//8002
-    std::string	server_name;			//localhost;
-    std::string	host;					//127.0.0.1;
-    std::string	root;					//docs/fusion_web/;
-//	long		client_max_body_size; 	//3000000;
-    std::string	index;					// ../../index.html;
-    std::string	error_page;				//404 error_pages/404.html;
-}	t_config;
+#include "WebServ.hpp"
 
 class	Socket
 {
@@ -22,9 +12,18 @@ class	Socket
 		int					_fd;
 		struct addrinfo		_hints;
 		struct addrinfo*	_socket;
-		t_config			_config;
+
 		Socket( Socket const &other );
 		Socket &operator=( Socket const &other );
+
+		//+ --- Main Functionality ---
+		void	socketGetAddrInfo( std::string port, std::string host );
+		void	socketCall( void );
+		void	socketOpt( void );
+		void	socketBind( void );
+		void	socketFreeAddrInfo( void );
+		void	socketListen( void );
+		void	socketSetNonBlock( void );
 	public:
 		Socket();
 		~Socket();
@@ -35,18 +34,8 @@ class	Socket
 				runtimeSocketException(const char* message);
 		};
 
-		//+ -----------
-		//* To errase after?
-		void	setConfig();
-		//* To errase after?
-		void	socketGetAddrInfo( void );
-		void	socketCall( void );
-		void	socketOpt( void );
-		void	socketBind( void );
-		void	socketFreeAddrInfo( void );
-		void	socketListen( void );
-		void	socketSetNonBlock( void );
-		void	makeSocket( void );
+		//+ --- Main executor ---
+		void	makeSocket( std::string port, std::string host );
 
 		//+ --- Getters / Setters / Helpers ---
 		int		getFd( void );

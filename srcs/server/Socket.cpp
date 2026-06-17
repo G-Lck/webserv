@@ -1,14 +1,4 @@
-#include "../../includes/WebServ.hpp"
-
-//* THIS IS JUST A HELPER FOR NOW, WE NEED TO SEE WHAT WE PASS TO THIS.
-void Socket::setConfig( void )
-{
-	this->_config.listen = "8002";
-	this->_config.server_name = "localhost";
-	this->_config.host = "127.0.0.1";
-	this->_config.root = "./www/";
-	this->_config.index = "index.html";
-}
+#include "../../includes/Socket.hpp"
 
 // --- Orthodox ---
 
@@ -27,14 +17,14 @@ Socket::runtimeSocketException::runtimeSocketException(const char* message) : st
 ///			SOCK_STREAM (Specifies that is a TCP stream socket) | 
 ///			AI_PASSIVE (Sets the ip of this pc for us) | 
 /// @throw	Throws runtimeSocketException() if getaddrinfo() fails
-void Socket::socketGetAddrInfo( void )
+void Socket::socketGetAddrInfo( std::string port, std::string host ) 
 {
 	memset(&(this->_hints), 0, sizeof this->_hints);
 	this->_hints.ai_family = AF_UNSPEC;
 	this->_hints.ai_socktype = SOCK_STREAM;
 	this->_hints.ai_flags = AI_PASSIVE;
 
-	this->_status = getaddrinfo(NULL, this->_config.listen.c_str(), &(this->_hints), &(this->_socket));
+	this->_status = getaddrinfo(host.c_str(), port.c_str(), &(this->_hints), &(this->_socket));
 	if (this->_status != 0)
 		throw runtimeSocketException("Error:\ngetaddrinfo() Fail");
 }
@@ -88,13 +78,16 @@ void	Socket::socketListen( void )
 ///			O_NONBLOCK => Apply non block to main socket.
 ///	@note	It forces functions like recv() and accept() to return an error immediately 
 ///			if there is no data, rather than freezing the program.
-void	Socket::socketSetNonBlock( void ) { fcntl(this->_fd, F_SETFL, O_NONBLOCK); }
+void Socket::socketSetNonBlock( void )
+{
+    if (fcntl(this->_fd, F_SETFL, O_NONBLOCK) == -1)
+        throw runtimeSocketException("Error:\nfcntl() Fail");
+}
 
 /// @brief	Calls all the member functions for creating a socket in order.
-/// @param backlog Reffers to how many incoming connections can wait in line at once.
-void	Socket::makeSocket( void )
+void	Socket::makeSocket( std::string port, std::string host )
 {
-	this->socketGetAddrInfo();
+	this->socketGetAddrInfo(port, host);
 	this->socketCall();
 	this->socketOpt();
 	this->socketBind();
@@ -106,7 +99,7 @@ void	Socket::makeSocket( void )
 // --- Helpers ---
 
 /// @brief	Close the file descriptor attached to this Socket.
-void	Socket::closeFd( void ) { if (this->_fd != -1) { close(this->_fd); this->setFd(-1); } }
+void	Socket::closeFd( void ) { if (this->_fd != -1) { close(this->_fd); this->_fd = -1; } }
 
 int		Socket::getFd( void ) { return (this->_fd); }
 

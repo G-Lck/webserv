@@ -36,15 +36,6 @@
 #include <sys/stat.h>   // stat() (to check if an HTML file exists before serving)
 #include <dirent.h>     // opendir(), readdir(), closedir() (for autoindex)
 
-//* ---------- HPP Includes -----------
-
-#include "Socket.hpp"
-#include "Server.hpp"
 #include "utils.hpp"
-#include "HttpRequest.hpp"
-#include "LocationConfig.hpp"
-#include "ServerConfig.hpp"
-#include "GlobalConfig.hpp"
-#include "Client.hpp"
 
 #endif

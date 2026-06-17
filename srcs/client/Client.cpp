@@ -1,4 +1,4 @@
-#include "../../includes/WebServ.hpp"
+#include "../../includes/Client.hpp"
 
 Client::Client()
 {

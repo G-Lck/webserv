@@ -1,4 +1,4 @@
-#include "../../includes/WebServ.hpp"
+#include "../../includes/Server.hpp"
 
 // --------------- Orthodoxy ---------------
 
@@ -10,11 +10,45 @@ Server::~Server() { closeSockets(); closeEpoll(); }
 
 Server::runtimeServerException::runtimeServerException(const char* message) : std::runtime_error(message) {}
 
-// --------------- Set up Epoll ---------------
+// --------------- Set up Config ---------------
+
+/// @brief Initializes physical sockets and sets up the virtual host routing maps.
+/// @details	Loops through all server blocks to grab their host:port combos. 
+/// 			To avoid bind() crashes, we make sure to only create one physical socket 
+///				per unique combination (of host+port). While doing this, we also fill the _virtualServers 
+///				and _fd_to_route maps so we can quickly route incoming HTTP requests 
+///				to the correct server block later during the epoll loop.
+/// @param config The GlobalConfig object holding all our parsed server blueprints.
+void	Server::configServer( GlobalConfig &config )
+{
+	t_port_host	 used_ports;
+	for (int i = 0; i < (int)config.serverCount(); i++)
+	{
+		const ServerConfig	&ServConf = config.getServers(i);
+		const t_port_host	ports = ServConf.getAllListen();
+
+		for (int j = 0; j < (int)ports.size(); j++)
+		{
+			t_port_host::iterator it;
+			it = std::find(used_ports.begin(), used_ports.end(), ports[j]);
+			if (it == used_ports.end())
+			{
+				Socket *newSocket = new Socket;
+				newSocket->makeSocket(ports[j].second, ports[j].first);
+				this->_fd_to_route[newSocket->getFd()] = ports[j];
+				used_ports.push_back(ports[j]);
+				this->addSocket(newSocket);
+			}
+			this->_virtualServers[ports[j]].push_back(ServConf);
+		}
+	}
+}
 
 /// @brief Add a single Socket to the _socket Vector.
 /// @param S The socket to add
-void	Server::addSocket( Socket *S ) { this->_sockets.push_back(S); }
+void	Server::addSocket( Socket *S ) { this->_sockets.insert(std::make_pair(S->getFd(), S)); }
+
+// --------------- Set up Epoll ---------------
 
 /// @brief	Creates the epoll object.
 ///			Stores the fd into _epoll_fd.
@@ -31,13 +65,13 @@ void	Server::epollInit( void )
 /// @throw	runtimeServerException() if epoll_ctl() fails.
 void    Server::epollAddSockets( void )
 {
-	std::vector<Socket*>::iterator it = this->_sockets.begin();
+	std::map<int, Socket*>::iterator it = this->_sockets.begin();
 
 	while (it != this->_sockets.end())
 	{
 		this->_event.events = EPOLLIN; 
-		this->_event.data.fd = (*it)->getFd(); 
-		if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, (*it)->getFd(), &this->_event) == -1)
+		this->_event.data.fd = it->second->getFd(); 
+		if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, it->second->getFd(), &this->_event) == -1)
 			throw runtimeServerException("Error\nepoll_ctl()");
 		++it;
 	}
@@ -46,11 +80,12 @@ void    Server::epollAddSockets( void )
 /// @brief Helper to close at the end all Sockets FD's
 void	Server::closeSockets( void )
 {
-	std::vector<Socket*>::iterator it = this->_sockets.begin();
+	std::map<int, Socket*>::iterator it = this->_sockets.begin();
 
 	while (it != this->_sockets.end())
 	{
-		(*it)->closeFd();
+		it->second->closeFd();
+		delete it->second;
 		++it;
 	}
 }
@@ -104,23 +139,14 @@ void	Server::initServer( void )
 
 // --------------- Handle Cases ---------------
 
-
 //* ------- Scenario A -------
 
 /// @brief Iterates through sockets until finding a matching fd
 /// @param curr Fd to match
 /// @return True if found
-bool	Server::fdMatch( int curr )
+bool    Server::fdMatch( int curr )
 {
-	std::vector<Socket*>::iterator it = this->_sockets.begin();
-
-	while( it != this->_sockets.end())
-	{
-		if ((*it)->getFd() == curr)
-			return ( true );
-		++it;
-	}
-	return ( false );
+    return (this->_sockets.find(curr) != this->_sockets.end());
 }
 
 /// @brief	Creates a new client and adds it to epoll
@@ -131,7 +157,7 @@ bool	Server::fdMatch( int curr )
 ///			 The client_ev epoll is localy allocated, set up the correct values and then
 ///			 the client fd and data is added to epoll.
 ///			 The epoll_event is then destroyed localy.
-///			 The fd of the new client is stored inside a member vector for later safe checks.
+///			 The fd of the new client is stored inside a member var for later safe checks.
 bool	Server::addNewClient( int curr_socket_fd )
 {
 	struct sockaddr_in  addr_client;
@@ -146,6 +172,7 @@ bool	Server::addNewClient( int curr_socket_fd )
 		return (false);	
 	}
 	fcntl(fd_client, F_SETFL, O_NONBLOCK);
+	this->_fd_to_route[fd_client] = this->_fd_to_route[curr_socket_fd];
 	struct epoll_event client_ev;
 	client_ev.events = EPOLLIN;
 	client_ev.data.fd = fd_client;
@@ -176,13 +203,15 @@ void	Server::readRequest( int fd )
 
 /// @brief Removes client from epoll, also cleaning the buffer and response vectors
 /// @param fd The client fd to be removed.
-///	@details ~ALWAYS remove from epoll before closing the FD
+///	@details 	ALWAYS remove from epoll before closing the FD
+///				ALWAYS remove from fd_to_route
 void	Server::clientDisconnect( int fd )
 {
 	epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
 	close(fd);
 	this->_client_buffers.erase(fd);
 	this->_client_responses.erase(fd);
+	this->_fd_to_route.erase(fd);
 }
 
 /// @brief  Extracts and processes a single, complete HTTP request from a client's buffer.

@@ -1,4 +1,6 @@
-#include "../../includes/WebServ.hpp"
+#include "../../includes/GlobalConfig.hpp"
+
+// ------ Orthodox ------
 
 GlobalConfig::GlobalConfig()
 {
@@ -7,7 +9,6 @@ GlobalConfig::GlobalConfig()
 	// for now it's hardcoded but we should maybe memset it here
 	this->_root = "../../";
 	this->_index.push_back("index.html");
-	this->_host = "127.0.0.1";
 	ServerConfig	new_server;
 	this->_servers.push_back(new_server);
 }
@@ -29,14 +30,31 @@ GlobalConfig& GlobalConfig::operator=(const GlobalConfig& other)
 		this->_error_pages = other._error_pages;
 		this->_autoindex = other._autoindex;
 		this->_client_max_body_size = other._client_max_body_size;
-		this->_host = other._host;
 	}
 	return *this;
 }
 
 GlobalConfig::~GlobalConfig() {}
 
-const ServerConfig&	GlobalConfig::getServers(unsigned int i)	const
-{
-	return (this->_servers[i]);
-}
+// ------ Getters ------
+
+/// @brief Returns the ServerConfig at the specified index
+const ServerConfig& GlobalConfig::getServers( size_t i ) const { return this->_servers[i]; }
+
+/// @brief Returns the global default root directory
+const std::string& GlobalConfig::getRoot( void ) const { return this->_root; }
+
+/// @brief Returns the global default index files
+const std::vector<std::string>& GlobalConfig::getIndex( void ) const { return this->_index; }
+
+/// @brief Returns the global default error pages
+const std::vector<std::string>& GlobalConfig::getErrorPages( void ) const { return this->_error_pages; }
+
+/// @brief Returns the global default autoindex setting
+bool GlobalConfig::getAutoindex( void ) const { return this->_autoindex; }
+
+/// @brief Returns the global default client max body size limit
+int GlobalConfig::getClientMaxBodySize( void ) const { return (int)this->_client_max_body_size; }
+
+/// @brief Returns the amount of serves
+size_t	GlobalConfig::serverCount( void ) const { return (this->_servers.size()); }

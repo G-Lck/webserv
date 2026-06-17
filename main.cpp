@@ -1,22 +1,22 @@
 #include "./includes/WebServ.hpp"
+#include "./includes/GlobalConfig.hpp"
+#include "./includes/Server.hpp"
 
 int	main( void )
 {
-	Server myServer;
-	Socket *mySocket = new Socket;
-	mySocket->setConfig();
+	GlobalConfig	Config;
+	Server 			Serv42;
+
 	try
 	{
-		mySocket->makeSocket();
+		Serv42.configServer(Config);
 	}
 	catch(const std::exception& e)
 	{
 		std::cerr << e.what() << '\n';
 	}
 
-	myServer.addSocket(mySocket);
-	myServer.epollInit();
-	myServer.epollAddSockets();
-	myServer.initServer();
-	delete mySocket;
+	Serv42.epollInit();
+	Serv42.epollAddSockets();
+	Serv42.initServer();
 }

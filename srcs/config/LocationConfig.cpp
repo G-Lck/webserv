@@ -1,4 +1,4 @@
-#include "../../includes/WebServ.hpp"
+#include "../../includes/LocationConfig.hpp"
 
 LocationConfig::LocationConfig()
 {

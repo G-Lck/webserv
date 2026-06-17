@@ -1,10 +1,10 @@
-#include "../../includes/WebServ.hpp"
+#include "../../includes/ServerConfig.hpp"
 
 ServerConfig::ServerConfig()
 {
 	std::cout << "ServerConfig default condstructor called" << std::endl;
 
-	this->_listen.push_back("8080");
+	this->_listen.push_back(std::make_pair("127.0.0.1", "8080"));
 	this->_server_name.push_back("localhost");
 	LocationConfig	new_location;
 	this->_locations.push_back(new_location);
@@ -34,7 +34,9 @@ ServerConfig& ServerConfig::operator=(const ServerConfig& other)
 
 ServerConfig::~ServerConfig() {}
 
-const std::string& ServerConfig::getListen(unsigned int i) const
-{
-    return this->_listen.at(i);
-}
+const std::pair<std::string, std::string>& ServerConfig::getListen(unsigned int i) const { return this->_listen.at(i); }
+
+/// @brief Returns all ports for this Server
+/// @return Returns a std::vector< std::pair<std::string, std::string> > containing the ports
+///			The first member of the pair is the host, and the second is the port
+const std::vector< std::pair<std::string, std::string> >	&ServerConfig::getAllListen( void ) const { return (this->_listen); }

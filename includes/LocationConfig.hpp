@@ -2,6 +2,7 @@
 #define LOCATIONCONFIG_HPP
 
 #include "WebServ.hpp"
+#include "LocationConfig.hpp"
 
 /**
  * @brief the type of privates attributs are maybe a little bit random
@@ -10,6 +11,7 @@ class LocationConfig {
 
 	private:
 		std::string					_root;
+		std::string 				_path;
 		bool						_autoindex;
 		int							_client_max_body_size;
 		std::vector<std::string>	_index;
