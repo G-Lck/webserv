@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cerrno>  		// Required to read the 'errno' variable
 #include <cstring> 		// Required for strerror()
+#include <fstream>
 
 // --- POSIX Sockets & Network ---
 #include <sys/socket.h> // socket(), bind(), listen(), accept(), send(), recv(), setsockopt()

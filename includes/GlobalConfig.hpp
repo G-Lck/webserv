@@ -7,6 +7,7 @@
 class GlobalConfig
 {
     private:
+		std::vector<std::string>	_tokens;
 		std::vector<ServerConfig>   _servers;
 		std::string                 _root;
 		std::vector<std::string>    _index;
@@ -30,6 +31,8 @@ class GlobalConfig
 		const std::vector<std::string>&		getErrorPages( void ) const;
 		bool								getAutoindex( void ) const;
 		int									getClientMaxBodySize( void ) const;
+		void								addToken( std::string token );
+		std::vector<std::string>			&getToken( void );
 };
 
 #endif

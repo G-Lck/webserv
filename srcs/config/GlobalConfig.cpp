@@ -58,3 +58,10 @@ int GlobalConfig::getClientMaxBodySize( void ) const { return (int)this->_client
 
 /// @brief Returns the amount of serves
 size_t	GlobalConfig::serverCount( void ) const { return (this->_servers.size()); }
+
+/// @brief Add a token
+/// @param token The token to add
+void	GlobalConfig::addToken( std::string token ) { this->_tokens.push_back(token); }
+
+/// @brief Get the vector of tokens by reference
+std::vector<std::string> &GlobalConfig::getToken( void ) { return (this->_tokens); }
