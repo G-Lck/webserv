@@ -1,0 +1,56 @@
+#ifndef ASERVER_HPP
+# define ASERVER_HPP
+
+#include "WebServ.hpp"
+#include "Socket.hpp"
+#include "Client.hpp"
+#include "Types.hpp"
+#include "GlobalConfig.hpp"
+
+class	AServer
+{
+	protected:
+		std::map<int, Socket*>		_sockets;
+		std::map<int, Client*>		_clients;
+		t_virtualServer				_virtualServers;
+		t_fdRoute					_fd_to_route;
+		
+		AServer(AServer const &other );
+		AServer &operator=( AServer const &other );
+
+		//+ --- Internal functionality ---
+		void	addSocket( Socket *S );
+		void	closeSockets( void );
+		void	closeClients( void );
+		
+		bool	fdMatch( int curr ) const;
+		bool	addNewClient( int curr_socket_fd );
+		void	clientDisconnect( int fd );
+		
+		void	handleCompleteRequest( int fd );
+		void	readRequest( int fd );
+		void	sendResponse( int fd );
+		virtual void	initMultiplexer( void ) = 0;
+		virtual void	addSocketsToMultiplexer( void ) = 0;
+		virtual void	run( void ) = 0;
+		virtual void	addClientToMultiplexer( int fd ) = 0;
+		virtual void	removeFdFromMultiplexer( int fd ) = 0;
+		virtual void	watchForRead( int fd ) = 0;
+		virtual void	watchForWrite( int fd ) = 0;
+
+	public:
+		AServer();
+		virtual ~AServer();
+
+		class runtimeAServerException : public std::runtime_error 
+		{
+			public:
+				runtimeAServerException(const char* message);
+		};
+
+		//+ --- Configuration and launching
+		void	configAServer( GlobalConfig &config );
+		void	initAServer( void );
+};
+
+#endif
