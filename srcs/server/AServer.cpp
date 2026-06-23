@@ -112,7 +112,7 @@ bool	AServer::addNewClient( int curr_socket_fd )
 	{
 		this->addClientToMultiplexer(fd_client);
 	}
-	catch (...)
+	catch ()
 	{
 		this->_clients.erase(fd_client);
 		delete newClient;

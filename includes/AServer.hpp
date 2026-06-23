@@ -19,24 +19,24 @@ class	AServer
 		AServer &operator=( AServer const &other );
 
 		//+ --- Internal functionality ---
-		void	addSocket( Socket *S );
-		void	closeSockets( void );
-		void	closeClients( void );
+		void	addSocket(Socket *S);
+		void	closeSockets(void);
+		void	closeClients(void);
 		
-		bool	fdMatch( int curr ) const;
-		bool	addNewClient( int curr_socket_fd );
-		void	clientDisconnect( int fd );
+		bool	fdMatch(int curr) const;
+		bool	addNewClient(int curr_socket_fd);
+		void	clientDisconnect(int fd);
 		
-		void	handleCompleteRequest( int fd );
-		void	readRequest( int fd );
-		void	sendResponse( int fd );
-		virtual void	initMultiplexer( void ) = 0;
-		virtual void	addSocketsToMultiplexer( void ) = 0;
-		virtual void	run( void ) = 0;
-		virtual void	addClientToMultiplexer( int fd ) = 0;
-		virtual void	removeFdFromMultiplexer( int fd ) = 0;
-		virtual void	watchForRead( int fd ) = 0;
-		virtual void	watchForWrite( int fd ) = 0;
+		void	handleCompleteRequest(int fd);
+		void	readRequest(int fd);
+		void	sendResponse(int fd);
+		virtual void	initMultiplexer(void) = 0;
+		virtual void	addSocketsToMultiplexer(void) = 0;
+		virtual void	run(void) = 0;
+		virtual void	addClientToMultiplexer(int fd) = 0;
+		virtual void	removeFdFromMultiplexer(int fd) = 0;
+		virtual void	watchForRead(int fd) = 0;
+		virtual void	watchForWrite(int fd) = 0;
 
 	public:
 		AServer();
