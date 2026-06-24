@@ -74,6 +74,14 @@ class ParseConfig
 		void	autoindexCase(std::vector<std::string>::iterator &it, GlobalConfig &config);
 		void	maxBodyCase(std::vector<std::string>::iterator &it, GlobalConfig &config);
 
+		void	servRootCase(std::vector<std::string>::iterator &it, ServerConfig &config);
+		void	servErrorPagesCase(std::vector<std::string>::iterator &it, ServerConfig &config);
+		void	servAutoindexCase(std::vector<std::string>::iterator &it, ServerConfig &config);
+		void	servMaxBodyCase(std::vector<std::string>::iterator &it, ServerConfig &config);
+		void	servListenCase(std::vector<std::string>::iterator &it, ServerConfig &config);
+		void	servCgiCase(std::vector<std::string>::iterator &it, ServerConfig &config);
+		void	servServerNameCase(std::vector<std::string>::iterator &it, ServerConfig &config);
+
 	public:
 		~ParseConfig();
 		ParseConfig();

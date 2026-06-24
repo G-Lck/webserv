@@ -12,6 +12,6 @@ typedef std::map< std::pair<std::string, std::string>, std::vector<ServerConfig>
 typedef std::map<int, std::pair<std::string, std::string> >                         		t_fdRoute;
 
 /// @brief A simple list holding Host and Port pairs, used to read listen directives
-typedef std::vector< std::pair<std::string, std::string> >                         			t_port_host;
+typedef std::pair<std::string, std::string>				                         			t_port_host;
 
 #endif

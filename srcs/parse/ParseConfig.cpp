@@ -50,7 +50,7 @@ std::string	ParseConfig::getFileText( const char* dir_c )
 /// @brief Tokenizes the text storing it in the vector of string tokens
 /// @param fileText The text to tokenize
 ///	@exception	Throws an exeption for unclosed brackets
-void	ParseConfig::tokenizer(std::string fileText)
+void ParseConfig::tokenizer(std::string fileText)
 {
 	size_t	i = 0;
 
@@ -87,7 +87,7 @@ void	ParseConfig::tokenizer(std::string fileText)
 
 // --------- MAIN LOGIC ---------
 
-void	ParseConfig::parse(GlobalConfig &config)
+void ParseConfig::parse(GlobalConfig &config)
 {
 	std::vector<std::string>::iterator 	it;
 
@@ -239,34 +239,31 @@ void ParseConfig::parseServerToken(std::vector<std::string>::iterator &it, Serve
 
     switch (type)
     {
-        case S_LISTEN:
-            // handle listen
-            break;
-        case S_SERVER_NAME:
-            // handle server_name
-            break;
-        case S_ROOT:
-            // handle root
-            break;
-        case S_ERROR_PAGE:
-            // handle error_page
-            break;
-        case S_AUTOINDEX:
-            // handle autoindex
-            break;
-        case S_MAX_BODY:
-            // handle client_max_body_size
-            break;
-        case S_CGI:
-            // handle cgi_handler
-            break;
-        case S_LOCATION:
-            // handle location block
-            break;
-        default:
-            std::string errMsg = "Error\nInvalid token in server context: " + *it;
-            throw ParseErrException(errMsg.c_str());
-            break;
+		case S_LISTEN:
+			servListenCase(it, config);
+			break;
+		case S_SERVER_NAME:
+			servServerNameCase(it, config);
+			break;
+		case S_ROOT:
+			servRootCase(it, config);
+			break;
+		case S_ERROR_PAGE:
+			servErrorPagesCase(it, config);
+			break;
+		case S_AUTOINDEX:
+			servAutoindexCase(it, config);
+			break;
+		case S_MAX_BODY:
+			servMaxBodyCase(it, config);
+			break;
+		case S_CGI:
+			servCgiCase(it, config);
+			break;
+		default:
+			std::string errMsg = "Error\nInvalid token in server context: " + *it;
+			throw ParseErrException(errMsg.c_str());
+			break;
     }
 }
 
@@ -393,9 +390,9 @@ void ParseConfig::autoindexCase(std::vector<std::string>::iterator &it, GlobalCo
 	it++; // Skip autoindex
 	if (it == this->_tokens.end() || *it == ";")
 		throw ParseErrException("Error\nWrong autoindex directive.");
-	if ((*it).compare("yes"))
+	if (!(*it).compare("yes"))
 		config.setAutoindex(true);
-	else if ((*it).compare("no"))
+	else if (!(*it).compare("no"))
 		config.setAutoindex(false);
 	else
 		throw ParseErrException("Error\nWrong autoindex directive.");
@@ -415,14 +412,170 @@ void ParseConfig::maxBodyCase(std::vector<std::string>::iterator &it, GlobalConf
 	if ((*it).find_first_not_of("0123456789") != std::string::npos)
 		throw ParseErrException("Error\nMax body value needs to be a number.");
 	int	code = std::atoi((*it).c_str());
+	config.setClientMaxBodySize(code);
+	it++; // Skip value
+	if (it == this->_tokens.end() || *it != ";")
+		throw ParseErrException("Error\nMissing expected semicolon after max-body.");
+	it++; // Skip semicolon
+}
+
+// --------- SERVER CASES ---------
+
+/// @brief Parses and adds the listen port for that server
+/// @exception Empty listen, Invalid format, Missing semicolon
+void ParseConfig::servListenCase(std::vector<std::string>::iterator &it, ServerConfig &config)
+{
+	it++; // Skip listen
+	if (!config.getListen().first.empty() && !config.getListen().second.empty())
+		throw ParseErrException("Error\nMore than one listen.");
+	if (it == this->_tokens.end() || *it == ";")
+		throw ParseErrException("Error\nEmpty listen directive.");
+	if (!validListen(*it))
+		throw ParseErrException("Error\nInvalid listen format.");
+	size_t colon = (*it).find(':');
+	if (colon == std::string::npos)
+		config.addListen("0.0.0.0", *it);
+	else
+		config.addListen((*it).substr(0, colon), (*it).substr(colon + 1));
+	it++; // Skip ip
+	if (it == this->_tokens.end() || *it != ";")
+		throw ParseErrException("Error\nMissing semicolon after listen.");
+	it++; // Skip semicolon
+}
+
+/// @brief Parses and adds root to the config
+/// @exception Empty root, more than one root, missing semicolon
+void ParseConfig::servRootCase(std::vector<std::string>::iterator &it, ServerConfig &config)
+{
+	it++; // Skip root
+	if (!config.getRoot().empty())
+		throw ParseErrException("Error\nMore than one root.");
+
+	if (it == this->_tokens.end() || *it == ";")
+		throw ParseErrException("Error\nEmpty root directive.");
+		
+	config.setRoot(*it);
+	it++; // Skip value
+
+	if (it == this->_tokens.end() || *it != ";")
+		throw ParseErrException("Error\nMissing expected semicolon after root.");
+	it++; // Skip semicolon
+}
+
+/// @brief Function to parse and add error pages to the config
+/// @exception Missing semicolon, emptz directive, error non number, missing code or path
+void ParseConfig::servErrorPagesCase(std::vector<std::string>::iterator &it, ServerConfig &config)
+{
+	std::vector<std::string>			temp;
+	std::vector<std::string>::iterator	t_it;
+
+	it++; // Skip err_page
+	while (it != this->_tokens.end() && *it != ";")
+	{
+		temp.push_back(*it);
+		it++;
+	}
+	if (it != this->_tokens.end() && *it != ";" && *it != "}")
+		throw ParseErrException("Error\nMissing expected semicolon after error_page.");
+	it++; // Skip semicolon
+	if (temp.empty())
+		throw ParseErrException("Error\nEmpty error_page directive.");
+	std::string path = temp.back();
+	t_it = temp.begin();
+	if (temp.size() < 2)
+		throw ParseErrException("Error\nMissing path or error code in error_page.");
+	while (t_it != temp.end() - 1)
+	{
+		if ((*t_it).find_first_not_of("0123456789") != std::string::npos)
+			throw ParseErrException("Error\nWrong error-code in error_page directive.");
+		int	code = std::atoi((*t_it).c_str());
+		config.addErrorPage(code, path);
+		t_it++;
+	}
+}
+
+/// @brief Function to parse and add autoindex to the config
+/// @exception Missing semicolon, empty value, accepts onlz "yes" or "no"
+void ParseConfig::servAutoindexCase(std::vector<std::string>::iterator &it, ServerConfig &config)
+{
+	it++; // Skip autoindex
+	if (it == this->_tokens.end() || *it == ";")
+		throw ParseErrException("Error\nWrong autoindex directive.");
+	if (!(*it).compare("yes"))
+		config.setAutoindex(true);
+	else if (!(*it).compare("no"))
+		config.setAutoindex(false);
+	else
+		throw ParseErrException("Error\nWrong autoindex directive.");
 	it++; // Skip value
 	if (it == this->_tokens.end() || *it != ";")
 		throw ParseErrException("Error\nMissing expected semicolon after autoindex.");
 	it++; // Skip semicolon
 }
 
-// --------- SERVER CASES ---------
+/// @brief Function to parse and add autoindex to the config
+/// @exception Missing semicolon, empty value, accepts onlz "yes" or "no"
+void ParseConfig::servMaxBodyCase(std::vector<std::string>::iterator &it, ServerConfig &config)
+{
+	it++; // Skip autoindex
+	if (it == this->_tokens.end() || *it == ";")
+		throw ParseErrException("Error\nWrong max_body directive.");
+	if ((*it).find_first_not_of("0123456789") != std::string::npos)
+		throw ParseErrException("Error\nMax body value needs to be a number.");
+	int	code = std::atoi((*it).c_str());
+	config.setClientMaxBodySize(code);
+	it++; // Skip value
+	if (it == this->_tokens.end() || *it != ";" || *it == "}")
+		throw ParseErrException("Error\nMissing expected semicolon after autoindex.");
+	it++; // Skip semicolon
+}
 
+/// @brief Function to parse and add autoindex to the config
+/// @exception Missing semicolon, invalid names, emtpy
+void ParseConfig::servServerNameCase(std::vector<std::string>::iterator &it, ServerConfig &config)
+{
+    it++;
+    if (it == this->_tokens.end() || *it == ";")
+        throw ParseErrException("Error\nEmpty server_name directive.");
+    while (it != this->_tokens.end() && *it != ";" && *it != "}")
+    {
+        for (size_t i = 0; i < (*it).size(); i++)
+            if (!isalnum((*it)[i]) && (*it)[i] != '-' && (*it)[i] != '.')
+                throw ParseErrException("Error\nInvalid server_name value.");
+        config.addServerName(*it);
+        it++;
+    }
+    if (it == this->_tokens.end() || *it == "}" || *it != ";")
+        throw ParseErrException("Error\nMissing semicolon after server_name.");
+    it++;
+}
+
+/// @brief Function to parse and add CGI to the config
+/// @exception Missing semicolon, empty value, wrong format, duplicates
+void ParseConfig::servCgiCase(std::vector<std::string>::iterator &it, ServerConfig &config)
+{
+    it++;
+    if (it == this->_tokens.end() || *it == ";" || *it == "}")
+        throw ParseErrException("Error\nEmpty cgi directive.");
+    if ((*it)[0] != '.')
+        throw ParseErrException("Error\nCGI extension must start with '.'");
+    std::string ext = *it;
+    it++;
+    if (it == this->_tokens.end() || *it == ";" || *it == "}")
+        throw ParseErrException("Error\nMissing cgi path.");
+    if ((*it)[0] != '/')
+        throw ParseErrException("Error\nCGI path must be absolute.");
+    std::string path = *it;
+    it++;
+    if (it == this->_tokens.end() || *it == "}")
+        throw ParseErrException("Error\nMissing semicolon after cgi.");
+    if (*it != ";")
+        throw ParseErrException("Error\nUnexpected token after cgi.");
+    if (!config.getCgiHandler().empty())
+        throw ParseErrException("Error\nDuplicate cgi directive.");
+    config.setCgiHandler(ext + " " + path);
+    it++;
+}
 
 
 // --------- LOCATION CASES ---------

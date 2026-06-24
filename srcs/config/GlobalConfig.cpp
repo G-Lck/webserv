@@ -2,16 +2,7 @@
 
 // ------ Orthodox ------
 
-GlobalConfig::GlobalConfig()
-{
-	std::cout << "GlobalConfig default condstructor called" << std::endl;
-
-	// for now it's hardcoded but we should maybe memset it here
-	this->_root = "../../";
-	this->_index.push_back("index.html");
-	ServerConfig	new_server;
-	this->_servers.push_back(new_server);
-}
+GlobalConfig::GlobalConfig() { }
 
 GlobalConfig::GlobalConfig(const GlobalConfig& other)
 {
