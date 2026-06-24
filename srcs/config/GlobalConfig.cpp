@@ -48,7 +48,7 @@ const std::string& GlobalConfig::getRoot( void ) const { return this->_root; }
 const std::vector<std::string>& GlobalConfig::getIndex( void ) const { return this->_index; }
 
 /// @brief Returns the global default error pages
-const std::vector<std::string>& GlobalConfig::getErrorPages( void ) const { return this->_error_pages; }
+const std::map<int, std::string>& GlobalConfig::getErrorPages( void ) const { return this->_error_pages; }
 
 /// @brief Returns the global default autoindex setting
 bool GlobalConfig::getAutoindex( void ) const { return this->_autoindex; }
@@ -59,9 +59,22 @@ int GlobalConfig::getClientMaxBodySize( void ) const { return (int)this->_client
 /// @brief Returns the amount of serves
 size_t	GlobalConfig::serverCount( void ) const { return (this->_servers.size()); }
 
-/// @brief Add a token
-/// @param token The token to add
-void	GlobalConfig::addToken( std::string token ) { this->_tokens.push_back(token); }
+// ------ Setters ------
 
-/// @brief Get the vector of tokens by reference
-std::vector<std::string> &GlobalConfig::getToken( void ) { return (this->_tokens); }
+/// @brief Adds a server to the server list
+void GlobalConfig::addServer( ServerConfig newServ ) { _servers.push_back(newServ); }
+
+/// @brief Sets the root directory
+void GlobalConfig::setRoot( const std::string &root ) { _root = root; }
+
+/// @brief Sets the index files
+void GlobalConfig::addIndex( const std::string &index ) { this->_index.push_back(index); }
+
+/// @brief Sets the error pages
+void GlobalConfig::addErrorPage( int code, const std::string &path ) { this->_error_pages[code] = path; }
+
+/// @brief Sets the autoindex
+void GlobalConfig::setAutoindex( bool autoindex ) { _autoindex = autoindex; }
+
+/// @brief Sets the client max body size
+void GlobalConfig::setClientMaxBodySize( int size ) { _client_max_body_size = size; }

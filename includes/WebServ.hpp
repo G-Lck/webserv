@@ -39,4 +39,7 @@
 
 #include "utils.hpp"
 
+bool validBrackets(const std::string &text);
+bool isValidErrorPagePath(const std::string& path);
+
 #endif
