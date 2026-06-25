@@ -55,6 +55,9 @@ void LocationConfig::setClientMaxBodySize(int size) { _client_max_body_size = si
 /// @brief Sets the index files
 void LocationConfig::setIndex(const std::vector<std::string> &index) { _index = index; }
 
+/// @brief Sets the index files
+void LocationConfig::addIndex( const std::string &index ) { this->_index.push_back(index); }
+
 /// @brief Sets the allowed methods
 void LocationConfig::setAllowMethods(const std::vector<std::string> &methods) { _allow_methods = methods; }
 
@@ -68,11 +71,10 @@ void LocationConfig::setCgiHandler(const std::pair<std::string, std::string> &cg
 void LocationConfig::setLimitExcept(const std::vector<std::string> &limit_except) { _limit_except = limit_except; }
 
 /// @brief Sets the return code and url
-void LocationConfig::setReturn(int code, const std::string &url) 
-{ 
-	_return_code = code; 
-	_return_url = url; 
-}
+void LocationConfig::setReturn(int code, const std::string &url) { _return_code = code; _return_url = url; }
+
+/// @brief Sets the upload directory path
+void LocationConfig::setUploadPath(const std::string &upload_path) { _upload_path = upload_path; }
 
 // ------ Getters ------
 
@@ -108,3 +110,6 @@ int LocationConfig::getReturnCode( void ) const { return _return_code; }
 
 /// @brief Returns the return url
 const std::string &LocationConfig::getReturnUrl( void ) const { return _return_url; }
+
+/// @brief Returns the upload directory path
+const std::string &LocationConfig::getUploadPath( void ) const { return _upload_path; }

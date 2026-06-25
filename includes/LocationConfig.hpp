@@ -20,11 +20,12 @@ class LocationConfig {
 		std::vector<std::string>			_limit_except;
 		std::string							_return_url;
 		int									_return_code;
+		std::string							_upload_path;
 
-		LocationConfig& operator=(const LocationConfig& other);
-	public:
+		public:
 		LocationConfig();
 		LocationConfig(const LocationConfig& other);
+		LocationConfig& operator=(const LocationConfig& other);
 		~LocationConfig();
 
 		//+ ---- Setters ----
@@ -33,11 +34,13 @@ class LocationConfig {
 		void    setAutoindex( bool autoindex );
 		void    setClientMaxBodySize( int size );
 		void    setIndex( const std::vector<std::string> &index );
+		void	addIndex( const std::string &index );
 		void    setAllowMethods( const std::vector<std::string> &methods );
 		void    addErrorPage( int code, const std::string &path );
 		void    setCgiHandler( const std::pair<std::string, std::string> &cgi_handler );
 		void    setLimitExcept( const std::vector<std::string> &limit_except );
 		void    setReturn( int code, const std::string &url );
+		void	setUploadPath( const std::string &upload_path );
 
 		//+ ---- Getters ----
 		const std::string&							getRoot( void ) const;
@@ -51,6 +54,7 @@ class LocationConfig {
 		const std::vector<std::string>&				getLimitExcept( void ) const;
 		int											getReturnCode( void ) const;
 		const std::string&							getReturnUrl( void ) const;
+		const std::string&							getUploadPath( void ) const;
 };
 
 #endif

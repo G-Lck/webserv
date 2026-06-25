@@ -21,7 +21,7 @@ enum e_token_type
 	T_LIMIT_EXCEPT,
 	T_ALLOW_METHODS,
 	T_RETURN,
-	T_PATH,
+	T_UPLOAD_PATH,
 	T_UNKNOWN
 };
 
@@ -76,7 +76,6 @@ class ParseConfig
 		//+ ---- Location Specific Cases ----
 		void	locParseAllowedMethods(std::vector<std::string>::iterator &it, LocationConfig &config);
 		void	locParseReturnCode(std::vector<std::string>::iterator &it, LocationConfig &config);
-		void	locParseReturnURL(std::vector<std::string>::iterator &it, LocationConfig &config);
 		void	locParseUploadPath(std::vector<std::string>::iterator &it, LocationConfig &config);
 
 	public:

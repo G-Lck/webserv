@@ -82,8 +82,8 @@ void ParseConfig::tokenizer(std::string fileText)
 			this->_tokens.push_back(token);
 		i = end;
 	}
-	for (std::vector<std::string>::iterator it = _tokens.begin(); it != _tokens.end(); it++)
-		std::cout << "[" << *it << "] ";
+	// for (std::vector<std::string>::iterator it = _tokens.begin(); it != _tokens.end(); it++)
+	// 	std::cout << "[" << *it << "] ";
 	std::cout << "\n";
 }
 
@@ -204,6 +204,7 @@ int ParseConfig::getLocationType(std::string& token)
 	if (token == "limit_except") return T_LIMIT_EXCEPT;
 	if (token == "allow_methods") return T_ALLOW_METHODS;
 	if (token == "return") return T_RETURN;
+	if (token == "upload_path") return T_UPLOAD_PATH;
 	return T_UNKNOWN;
 }
 
@@ -277,13 +278,9 @@ void ParseConfig::parseServerToken(std::vector<std::string>::iterator &it, Serve
 void ParseConfig::parseLocationToken(std::vector<std::string>::iterator &it, LocationConfig &config)
 {
 	int type = getLocationType(*it);
-	(void)config;
 	
 	switch (type)
 	{
-		case T_PATH:
-			//parseLocationPath(it, config);
-			break;
 		case T_ROOT:
 			parseRoot(it, config);
 			break;
@@ -303,13 +300,16 @@ void ParseConfig::parseLocationToken(std::vector<std::string>::iterator &it, Loc
 			parseCGI(it, config);
 			break;
 		case T_LIMIT_EXCEPT:
-			// handle limit_except
+			locParseAllowedMethods(it, config);
 			break;
 		case T_ALLOW_METHODS:
-			// handle allow_methods
+			locParseAllowedMethods(it, config);
 			break;
 		case T_RETURN:
-			// handle return
+			locParseReturnCode(it, config);
+			break;
+		case T_UPLOAD_PATH:
+			locParseUploadPath(it, config);
 			break;
 		default:
 			std::string errMsg = "Error\nInvalid token in location context: " + *it;
@@ -413,12 +413,14 @@ void	ParseConfig::parseAutoindex(std::vector<std::string>::iterator &it, T &conf
 	it++; // Skip autoindex
 	if (it == this->_tokens.end() || *it == ";") //+ Check if not empty
 		throw ParseErrException("Error\nWrong autoindex directive.");
-	if (!(*it).compare("yes")) //+ Validate yes
+
+	if ((*it).compare("yes")) //+ Validate yes
 		config.setAutoindex(true);
-	else if (!(*it).compare("no")) //+ Validate no
+	else if ((*it).compare("no")) //+ Validate no
 		config.setAutoindex(false);
 	else
 		throw ParseErrException("Error\nWrong autoindex directive.");
+
 	it++; // Skip value
 	if (it == this->_tokens.end() || *it != ";")
 		throw ParseErrException("Error\nMissing expected semicolon after autoindex.");
@@ -537,6 +539,8 @@ void ParseConfig::servParseServerName(std::vector<std::string>::iterator &it, Se
 
 // --------- LOCATION CASES ---------
 
+/// @brief Function to parse and add allowed methods to the config
+/// @exception Missing semicolon, invalid names
 void	ParseConfig::locParseAllowedMethods(std::vector<std::string>::iterator &it, LocationConfig &config)
 {
 	it++; // Skip allowed_methods
@@ -546,24 +550,64 @@ void	ParseConfig::locParseAllowedMethods(std::vector<std::string>::iterator &it,
 	std::vector<std::string>	methods;
 	while (it != this->_tokens.end() && *it != ";" && *it != "}")
 	{
-		if (validMethod(*it))
-			methods.push_back()
+		if (!validMethod(*it)) //+ Validate method GET, POST, DELETE
+			throw ParseErrException("Error\nNot allowed method.");
+		methods.push_back(*it);
+		it++; // Next method
 	}
+	config.setAllowMethods(methods);
+
+	if (it == this->_tokens.end() || *it == "}" || *it != ";") //+ Find semicolon
+		throw ParseErrException("Error\nMissing semicolon after server_name.");
+	it++; // Skip semicolon
 }
 
 void	ParseConfig::locParseReturnCode(std::vector<std::string>::iterator &it, LocationConfig &config)
 {
+	it++; // Skip return
+	
+	if (it == this->_tokens.end() || *it == ";") //+ Check if empty
+		throw ParseErrException("Error\nEmpty return directive.");
 
-}
-
-void	ParseConfig::locParseReturnURL(std::vector<std::string>::iterator &it, LocationConfig &config)
-{
-
+	if ((*it).find_first_not_of("0123456789") != std::string::npos) //+ Check if numeric
+		throw ParseErrException("Error\nReturn code must be numeric.");
+	
+	int code = std::atoi((*it).c_str());
+	if (code != 301 && code != 302 && code != 307 && code != 308) //+ Check valid code
+		throw ParseErrException("Error\nInvalid return code (must be 301, 302, 307, or 308).");
+	
+	it++; // Move to URL
+	
+	if (it == this->_tokens.end() || *it == ";") //+ Check if no URL
+		throw ParseErrException("Error\nMissing URL in return directive.");
+		
+	std::string url = *it;
+	config.setReturn(code, url);
+	
+	it++;
+	if (it == this->_tokens.end() || *it != ";") //+ Check Semicolon
+		throw ParseErrException("Error\nMissing semicolon after return directive.");
+	
+	it++; // Skip semicolon
 }
 
 void	ParseConfig::locParseUploadPath(std::vector<std::string>::iterator &it, LocationConfig &config)
 {
+	it++; // Skip upload_path
+	
+	if (it == this->_tokens.end() || *it == ";")
+		throw ParseErrException("Error\nEmpty upload_path directive.");
 
+	if ((*it)[0] != '/') //+ Valid path
+		throw ParseErrException("Error\nUpload path must be absolute (start with '/').");
+		
+	config.setUploadPath(*it);
+	
+	it++;
+	if (it == this->_tokens.end() || *it != ";") //+ Check semicolon
+		throw ParseErrException("Error\nMissing semicolon after upload_path.");
+		
+	it++; // Skip semicolon
 }
 
 // --------- COMPILER STUFF ---------

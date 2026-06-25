@@ -17,6 +17,7 @@ int	main( int ac, char **av )
 	try
 	{
 		Parse.parse(Config);
+		printConfig(Config, 1);
 		//+ CHECK PARSE FUNCTION MISSING:
 		//	- check if root is not empty
 		//	- check at least one server
@@ -26,6 +27,8 @@ int	main( int ac, char **av )
 	catch(const std::exception& e)
 	{
 		std::cerr << e.what() << '\n';
+		printConfig(Config, 0);
+		return (1);
 	}
 	
 	try

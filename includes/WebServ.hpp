@@ -39,10 +39,13 @@
 
 #include "utils.hpp"
 
+class GlobalConfig;
+
 bool	validBrackets(const std::string &text);
 bool	isValidErrorPagePath(const std::string& path);
 bool	validListen(const std::string &token);
 bool	validIP(const std::string &host);
 bool	validMethod( std::string method );
+void	printConfig(GlobalConfig &config, int flag);
 
 #endif
