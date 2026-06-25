@@ -7,7 +7,9 @@ FLAGS = -Wall -Werror -g -Wextra -std=c++98
 SRC = \
 		main.cpp \
 		srcs/server/Socket.cpp \
-		srcs/server/Server.cpp \
+		srcs/server/AServer.cpp \
+		srcs/server/PollServer.cpp \
+		srcs/server/EpollServer.cpp \
 		srcs/utils/requestAndResponse.cpp \
 		srcs/config/GlobalConfig.cpp \
 		srcs/config/ServerConfig.cpp \

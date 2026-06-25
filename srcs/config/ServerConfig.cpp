@@ -39,4 +39,4 @@ const std::pair<std::string, std::string>& ServerConfig::getListen(unsigned int 
 /// @brief Returns all ports for this Server
 /// @return Returns a std::vector< std::pair<std::string, std::string> > containing the ports
 ///			The first member of the pair is the host, and the second is the port
-const std::vector< std::pair<std::string, std::string> >	&ServerConfig::getAllListen( void ) const { return (this->_listen); }
+const std::vector< std::pair<std::string, std::string> >	&ServerConfig::getAllListen(void) const { return (this->_listen); }

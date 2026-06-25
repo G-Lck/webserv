@@ -18,12 +18,12 @@ class	Socket
 
 		//+ --- Main Functionality ---
 		void	socketGetAddrInfo( std::string port, std::string host );
-		void	socketCall( void );
-		void	socketOpt( void );
-		void	socketBind( void );
-		void	socketFreeAddrInfo( void );
-		void	socketListen( void );
-		void	socketSetNonBlock( void );
+		void	socketCall(void);
+		void	socketOpt(void);
+		void	socketBind(void);
+		void	socketFreeAddrInfo(void);
+		void	socketListen(void);
+		void	socketSetNonBlock(void);
 	public:
 		Socket();
 		~Socket();
@@ -38,9 +38,9 @@ class	Socket
 		void	makeSocket( std::string port, std::string host );
 
 		//+ --- Getters / Setters / Helpers ---
-		int		getFd( void );
+		int		getFd(void);
 		void	setFd( int n );
-		void	closeFd( void );
+		void	closeFd(void);
 };
 
 #endif

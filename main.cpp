@@ -1,22 +1,24 @@
 #include "./includes/WebServ.hpp"
 #include "./includes/GlobalConfig.hpp"
-#include "./includes/Server.hpp"
+#include "./includes/EpollServer.hpp"
+#include "./includes/PollServer.hpp"
 
-int	main( void )
+int	main(void)
 {
 	GlobalConfig	Config;
-	Server 			Serv42;
+	#ifdef __linux__
+	EpollServer 	Serv42;
+	#else
+	PollServer 		Serv42;
+	#endif
 
 	try
 	{
-		Serv42.configServer(Config);
+		Serv42.configAServer(Config);
+		Serv42.initAServer();
 	}
 	catch(const std::exception& e)
 	{
 		std::cerr << e.what() << '\n';
 	}
-
-	Serv42.epollInit();
-	Serv42.epollAddSockets();
-	Serv42.initServer();
 }

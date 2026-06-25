@@ -30,7 +30,9 @@
 #include <poll.h>       // poll(), struct pollfd, POLLIN, POLLOUT
 #include <fcntl.h>      // fcntl(), F_SETFL, O_NONBLOCK
 #include <unistd.h>     // close(), read(), write(), fork(), execve(), pipe(), dup2()
-#include <sys/epoll.h> 	// epoll()
+#ifdef __linux__
+# include <sys/epoll.h> 	// epoll()
+#endif
 
 // --- POSIX File System & CGI ---
 #include <sys/stat.h>   // stat() (to check if an HTML file exists before serving)
