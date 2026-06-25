@@ -2,20 +2,26 @@
 
 // ------- Orthodox -------
 
-ServerConfig::ServerConfig() {}
+ServerConfig::ServerConfig() : _autoindex(false), _client_max_body_size(0) {}
 
-ServerConfig::ServerConfig(const ServerConfig& other)
-{
-	std::cout << "ServerConfig copy condstructor called" << std::endl;
-	*this = other;
-}
+ServerConfig::ServerConfig(const ServerConfig &other) :
+	_listen(other._listen),
+	_server_name(other._server_name),
+	_index(other._index),
+	_root(other._root),
+	_error_pages(other._error_pages),
+	_autoindex(other._autoindex),
+	_locations(other._locations),
+	_client_max_body_size(other._client_max_body_size),
+	_cgi_handler(other._cgi_handler)
+{}
 
-ServerConfig& ServerConfig::operator=(const ServerConfig& other)
-{
-	std::cout << "ServerConfig operator = copy called" << std::endl;
+ServerConfig& ServerConfig::operator=(const ServerConfig& other) 
+{ 
 	if (this != &other) {
 		this->_listen = other._listen;
 		this->_server_name = other._server_name;
+		this->_index = other._index;
 		this->_root = other._root;
 		this->_error_pages = other._error_pages;
 		this->_autoindex = other._autoindex;
@@ -23,50 +29,54 @@ ServerConfig& ServerConfig::operator=(const ServerConfig& other)
 		this->_client_max_body_size = other._client_max_body_size;
 		this->_cgi_handler = other._cgi_handler;
 	}
-	return *this;
+	return *this; 
 }
 
 ServerConfig::~ServerConfig() {}
 
 // ------- Getters -------
 
-/// @brief Returns the listen pair at index i
-const std::pair<std::string, std::string>& ServerConfig::getListen( void ) const { return this->_listen; }
+/// @brief Returns the listen pair at index pos
+const std::pair<std::string, std::string>& ServerConfig::getListen( int pos ) const { return this->_listen[pos]; }
+
+/// @brief Returns all listen pairs
+const t_port_host& ServerConfig::getAllListen( void ) const { return ( this->_listen ); }
 
 /// @brief Returns the server names
-const std::vector<std::string> &ServerConfig::getServerName( void ) const
-{ return _server_name; }
+const std::vector<std::string> &ServerConfig::getServerName( void ) const { return _server_name; }
+
+/// @brief Returns the index files
+const std::vector<std::string> &ServerConfig::getIndex( void ) const { return _index; }
 
 /// @brief Returns the root directory
-const std::string &ServerConfig::getRoot( void ) const
-{ return _root; }
+const std::string &ServerConfig::getRoot( void ) const { return _root; }
 
 /// @brief Returns the error pages
 const std::map<int, std::string> &ServerConfig::getErrorPage( void ) const { return _error_pages; }
 
 /// @brief Returns the autoindex
-bool ServerConfig::getAutoindex( void ) const
-{ return _autoindex; }
+bool ServerConfig::getAutoindex( void ) const { return _autoindex; }
 
 /// @brief Returns the locations
-const std::vector<LocationConfig> &ServerConfig::getLocations( void ) const
-{ return _locations; }
+const std::vector<LocationConfig> &ServerConfig::getLocations( void ) const { return _locations; }
 
 /// @brief Returns the client max body size
-int ServerConfig::getClientMaxBodySize( void ) const
-{ return _client_max_body_size; }
+int ServerConfig::getClientMaxBodySize( void ) const { return _client_max_body_size; }
 
 /// @brief Returns the cgi handler
-const std::string &ServerConfig::getCgiHandler( void ) const
-{ return _cgi_handler; }
+const std::pair<std::string, std::string> &ServerConfig::getCgiHandler( void ) const { return _cgi_handler; }
+
 
 // ------- Setters -------
 
 /// @brief Sets the listen pair
-void ServerConfig::addListen(const std::string &host, const std::string &port) { _listen = std::make_pair(host, port); }
+void ServerConfig::addListen(const std::string &host, const std::string &port) { _listen.push_back(std::make_pair(host, port)); }
 
 /// @brief Sets the server name
 void ServerConfig::addServerName(const std::string &name) { _server_name.push_back(name); }
+
+/// @brief Adds an index file
+void ServerConfig::addIndex(const std::string &index) { _index.push_back(index); }
 
 /// @brief Sets the root directory
 void ServerConfig::setRoot(const std::string &root) { _root = root; }
@@ -84,4 +94,4 @@ void ServerConfig::addLocation(const LocationConfig &location) { _locations.push
 void ServerConfig::setClientMaxBodySize(int size) { _client_max_body_size = size; }
 
 /// @brief Sets the cgi handler
-void ServerConfig::setCgiHandler(const std::string &cgi_handler) { _cgi_handler = cgi_handler; }
+void ServerConfig::setCgiHandler(const std::pair<std::string, std::string> &cgi_handler) { _cgi_handler = cgi_handler; }

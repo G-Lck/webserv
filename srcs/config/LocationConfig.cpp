@@ -2,29 +2,36 @@
 
 // ------ Orthodox ------
 
-LocationConfig::LocationConfig()
-{
-	std::cout << "LocationConfig default constructor called" << std::endl;
-}
+LocationConfig::LocationConfig() : _autoindex(false), _client_max_body_size(0), _return_code(0) {}
 
-LocationConfig::LocationConfig(const LocationConfig& other)
-{
-	std::cout << "LocationConfig copy condstructor called" << std::endl;
-	*this = other;
-}
+LocationConfig::LocationConfig(const LocationConfig &other) :
+	_root(other._root),
+	_path(other._path),
+	_autoindex(other._autoindex),
+	_client_max_body_size(other._client_max_body_size),
+	_index(other._index),
+	_allow_methods(other._allow_methods),
+	_error_pages(other._error_pages),
+	_cgi_handler(other._cgi_handler),
+	_limit_except(other._limit_except),
+	_return_url(other._return_url),
+	_return_code(other._return_code)
+{}
 
 LocationConfig& LocationConfig::operator=(const LocationConfig& other)
 {
-	std::cout << "LocationConfig operator = called" << std::endl;
 	if (this != &other) {
 		this->_root = other._root;
+		this->_path = other._path; 
 		this->_autoindex = other._autoindex;
 		this->_client_max_body_size = other._client_max_body_size;
 		this->_index = other._index;
+		this->_allow_methods = other._allow_methods;
 		this->_error_pages = other._error_pages;
 		this->_cgi_handler = other._cgi_handler;
 		this->_limit_except = other._limit_except;
-		this->_return = other._return;
+		this->_return_url = other._return_url;
+		this->_return_code = other._return_code;
 	}
 	return *this;
 }
@@ -48,17 +55,24 @@ void LocationConfig::setClientMaxBodySize(int size) { _client_max_body_size = si
 /// @brief Sets the index files
 void LocationConfig::setIndex(const std::vector<std::string> &index) { _index = index; }
 
-/// @brief Sets the error pages
-void LocationConfig::setErrorPages(const std::vector<std::string> &error_pages) { _error_pages = error_pages; }
+/// @brief Sets the allowed methods
+void LocationConfig::setAllowMethods(const std::vector<std::string> &methods) { _allow_methods = methods; }
+
+/// @brief Adds a single error page to the map
+void LocationConfig::addErrorPage(int code, const std::string &path) { _error_pages[code] = path; }
 
 /// @brief Sets the cgi handler
-void LocationConfig::setCgiHandler(const std::string &cgi_handler) { _cgi_handler = cgi_handler; }
+void LocationConfig::setCgiHandler(const std::pair<std::string, std::string> &cgi_handler) { _cgi_handler = cgi_handler; }
 
 /// @brief Sets the limit except
-void LocationConfig::setLimitExcept(const std::string &limit_except) { _limit_except = limit_except; }
+void LocationConfig::setLimitExcept(const std::vector<std::string> &limit_except) { _limit_except = limit_except; }
 
-/// @brief Sets the return
-void LocationConfig::setReturn(const std::string &ret) { _return = ret; }
+/// @brief Sets the return code and url
+void LocationConfig::setReturn(int code, const std::string &url) 
+{ 
+	_return_code = code; 
+	_return_url = url; 
+}
 
 // ------ Getters ------
 
@@ -77,14 +91,20 @@ int LocationConfig::getClientMaxBodySize( void ) const { return _client_max_body
 /// @brief Returns the index files
 const std::vector<std::string> &LocationConfig::getIndex( void ) const { return _index; }
 
-/// @brief Returns the error pages
-const std::vector<std::string> &LocationConfig::getErrorPages( void ) const { return _error_pages; }
+/// @brief Returns the allowed methods
+const std::vector<std::string> &LocationConfig::getAllowMethods( void ) const { return _allow_methods; }
+
+/// @brief Returns the error pages map
+const std::map<int, std::string> &LocationConfig::getErrorPages( void ) const { return _error_pages; }
 
 /// @brief Returns the cgi handler
-const std::string &LocationConfig::getCgiHandler( void ) const { return _cgi_handler; }
+const std::pair<std::string, std::string> &LocationConfig::getCgiHandler( void ) const { return _cgi_handler; }
 
 /// @brief Returns the limit except
-const std::string &LocationConfig::getLimitExcept( void ) const { return _limit_except; }
+const std::vector<std::string> &LocationConfig::getLimitExcept( void ) const { return _limit_except; }
 
-/// @brief Returns the return
-const std::string &LocationConfig::getReturn( void ) const { return _return; }
+/// @brief Returns the return code
+int LocationConfig::getReturnCode( void ) const { return _return_code; }
+
+/// @brief Returns the return url
+const std::string &LocationConfig::getReturnUrl( void ) const { return _return_url; }

@@ -39,9 +39,10 @@
 
 #include "utils.hpp"
 
-bool validBrackets(const std::string &text);
-bool isValidErrorPagePath(const std::string& path);
-bool validListen(const std::string &token);
-bool validIP(const std::string &host);
+bool	validBrackets(const std::string &text);
+bool	isValidErrorPagePath(const std::string& path);
+bool	validListen(const std::string &token);
+bool	validIP(const std::string &host);
+bool	validMethod( std::string method );
 
 #endif

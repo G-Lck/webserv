@@ -14,10 +14,10 @@ class GlobalConfig
 		bool						_autoindex;
 		int							_client_max_body_size;
 
-	public:
-		GlobalConfig();
 		GlobalConfig(const GlobalConfig& other);
 		GlobalConfig& operator=(const GlobalConfig& other);
+	public:
+		GlobalConfig();
 		~GlobalConfig();
 
 		//+ --- Vector Management ---

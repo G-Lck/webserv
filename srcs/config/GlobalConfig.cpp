@@ -2,28 +2,11 @@
 
 // ------ Orthodox ------
 
-GlobalConfig::GlobalConfig() { }
+GlobalConfig::GlobalConfig() : _autoindex(false), _client_max_body_size(0) {}
 
-GlobalConfig::GlobalConfig(const GlobalConfig& other)
-{
-	std::cout << "GlobalConfig copy condstructor called" << std::endl;
-	*this = other;
-}
+GlobalConfig::GlobalConfig(const GlobalConfig& other) { (void)other; }
 
-GlobalConfig& GlobalConfig::operator=(const GlobalConfig& other)
-{
-	std::cout << "GlobalConfig operator = called" << std::endl;
-
-	if (this != &other) {
-		this->_servers = other._servers;
-		this->_root = other._root;
-		this->_index = other._index;
-		this->_error_pages = other._error_pages;
-		this->_autoindex = other._autoindex;
-		this->_client_max_body_size = other._client_max_body_size;
-	}
-	return *this;
-}
+GlobalConfig& GlobalConfig::operator=(const GlobalConfig& other) { (void)other; return *this; }
 
 GlobalConfig::~GlobalConfig() {}
 

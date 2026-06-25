@@ -25,7 +25,7 @@ void	Server::configServer( GlobalConfig &config )
 	for (int i = 0; i < (int)config.serverCount(); i++)
 	{
 		const ServerConfig	&ServConf = config.getServers(i);
-		const t_port_host	ports = ServConf.getListen();
+		const t_port_host	ports = ServConf.getAllListen();
 
 		for (int j = 0; j < (int)ports.size(); j++)
 		{
