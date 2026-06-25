@@ -26,7 +26,7 @@ class ServerConfig {
 		~ServerConfig();
 
 		const std::pair<std::string, std::string>&	getListen(unsigned int i) const;
-		const std::vector< std::pair<std::string, std::string> >& getAllListen( void ) const;
+		const std::vector< std::pair<std::string, std::string> >& getAllListen(void) const;
 };
 
 #endif

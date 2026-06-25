@@ -49,7 +49,7 @@ void	AServer::addSocket( Socket *S )
 }
 
 /// @brief Close and delete all sockets.
-void	AServer::closeSockets( void )
+void	AServer::closeSockets(void)
 {
 	std::map<int, Socket*>::iterator it = this->_sockets.begin();
 	while (it != this->_sockets.end())
@@ -62,7 +62,7 @@ void	AServer::closeSockets( void )
 }
 
 /// @brief Close and delete all remaining clients.
-void	AServer::closeClients( void )
+void	AServer::closeClients(void)
 {
 	std::map<int, Client*>::iterator it = this->_clients.begin();
 	while (it != this->_clients.end())
@@ -76,7 +76,7 @@ void	AServer::closeClients( void )
 
 // --------------- Launching ---------------
 
-void	AServer::initAServer( void )
+void	AServer::initAServer(void)
 {
 	this->initMultiplexer();
 	this->addSocketsToMultiplexer();
@@ -112,7 +112,7 @@ bool	AServer::addNewClient( int curr_socket_fd )
 	{
 		this->addClientToMultiplexer(fd_client);
 	}
-	catch ()
+	catch (...)
 	{
 		this->_clients.erase(fd_client);
 		delete newClient;

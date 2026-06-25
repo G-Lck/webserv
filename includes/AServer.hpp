@@ -50,7 +50,7 @@ class	AServer
 
 		//+ --- Configuration and launching
 		void	configAServer( GlobalConfig &config );
-		void	initAServer( void );
+		void	initAServer(void);
 };
 
 #endif

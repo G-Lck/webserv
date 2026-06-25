@@ -31,7 +31,7 @@ void Socket::socketGetAddrInfo( std::string port, std::string host )
 
 /// @brief	Calls the function socket() to set the _fd
 /// @throw	Throws runtimeSocketException() if socket() fails
-void	Socket::socketCall( void ) 
+void	Socket::socketCall(void) 
 {
 	this->_fd = socket(this->_socket->ai_family, this->_socket->ai_socktype, this->_socket->ai_protocol);
 	if (this->_fd == -1)
@@ -42,7 +42,7 @@ void	Socket::socketCall( void )
 //			In case of server stopping, this lets bind assing the same port from before.
 //			This is because if the server stops, the OS keeps this port for 60 seconds after. With this we avoid that
 /// @throw	Throws runtimeSocketException() if setsockopt() fails
-void	Socket::socketOpt( void ) 
+void	Socket::socketOpt(void) 
 {
     int opt = 1;
     if (setsockopt(this->_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) 
@@ -52,7 +52,7 @@ void	Socket::socketOpt( void )
 /// @brief	Calls bind() function for this socket.
 ///			bind() assigns the IP and Port < set by Socket::getAddrInfo() > to the FD of this socket
 /// @throw	Throws runtimeSocketException() if bind() fails
-void	Socket::socketBind( void ) 
+void	Socket::socketBind(void) 
 {
 	if (bind(this->_fd, this->_socket->ai_addr, this->_socket->ai_addrlen) == -1)
 		throw runtimeSocketException("Error:\nbind() Fail");
@@ -61,12 +61,12 @@ void	Socket::socketBind( void )
 /// @brief	Calls freeaddrinfo() function for this socket.
 ///			Frees the linked list memory created by Socket::getAddrInfo()
 /// @note	Free after using bind(), not needed after.
-void	Socket::socketFreeAddrInfo( void ) { freeaddrinfo(this->_socket); }
+void	Socket::socketFreeAddrInfo(void) { freeaddrinfo(this->_socket); }
 
 /// @brief	Calls listen() for this socket.
 //			listen() tells the OS to start accepting incoming connections. 
 /// @note 	Constant BACKLOG - Reffers to how many incoming connections can wait in line at once.
-void	Socket::socketListen( void ) 
+void	Socket::socketListen(void) 
 {
     if (listen(this->_fd, BACKLOG) == -1)
 		throw runtimeSocketException("Error:\nlisten() Fail");
@@ -78,7 +78,7 @@ void	Socket::socketListen( void )
 ///			O_NONBLOCK => Apply non block to main socket.
 ///	@note	It forces functions like recv() and accept() to return an error immediately 
 ///			if there is no data, rather than freezing the program.
-void Socket::socketSetNonBlock( void )
+void Socket::socketSetNonBlock(void)
 {
     if (fcntl(this->_fd, F_SETFL, O_NONBLOCK) == -1)
         throw runtimeSocketException("Error:\nfcntl() Fail");
@@ -99,9 +99,9 @@ void	Socket::makeSocket( std::string port, std::string host )
 // --- Helpers ---
 
 /// @brief	Close the file descriptor attached to this Socket.
-void	Socket::closeFd( void ) { if (this->_fd != -1) { close(this->_fd); this->_fd = -1; } }
+void	Socket::closeFd(void) { if (this->_fd != -1) { close(this->_fd); this->_fd = -1; } }
 
-int		Socket::getFd( void ) { return (this->_fd); }
+int		Socket::getFd(void) { return (this->_fd); }
 
 void	Socket::setFd( int n ) { this->_fd = n; }
 

@@ -8,6 +8,7 @@ SRC = \
 		main.cpp \
 		srcs/server/Socket.cpp \
 		srcs/server/AServer.cpp \
+		srcs/server/PollServer.cpp \
 		srcs/server/EpollServer.cpp \
 		srcs/utils/requestAndResponse.cpp \
 		srcs/config/GlobalConfig.cpp \

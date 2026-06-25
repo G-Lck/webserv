@@ -27,14 +27,14 @@ EpollServer::runtimeEpollServerException::runtimeEpollServerException(const char
 
 // --------------- Set up Epoll ---------------
 
-void	EpollServer::initMultiplexer( void )
+void	EpollServer::initMultiplexer(void)
 {
 	this->_epoll_fd = epoll_create(1);
 	if (this->_epoll_fd == -1)
 		throw runtimeEpollServerException("Error\nEpoll init.");
 }
 
-void	EpollServer::addSocketsToMultiplexer( void )
+void	EpollServer::addSocketsToMultiplexer(void)
 {
 	std::map<int, Socket*>::iterator it = this->_sockets.begin();
 	while (it != this->_sockets.end())
@@ -47,7 +47,7 @@ void	EpollServer::addSocketsToMultiplexer( void )
 	}
 }
 
-void	EpollServer::run( void )
+void	EpollServer::run(void)
 {
 	while (1)
 	{
@@ -108,7 +108,7 @@ void	EpollServer::watchForWrite( int fd )
 	epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &mod_ev);
 }
 
-void	EpollServer::closeEpoll( void )
+void	EpollServer::closeEpoll(void)
 {
 	if (this->_epoll_fd != -1)
 		close(this->_epoll_fd);
@@ -117,14 +117,14 @@ void	EpollServer::closeEpoll( void )
 
 #else
 
-void	EpollServer::initMultiplexer( void )
+void	EpollServer::initMultiplexer(void)
 {
 	throw runtimeEpollServerException("Epoll is not available on this platform.");
 }
 
-void	EpollServer::addSocketsToMultiplexer( void ) {}
+void	EpollServer::addSocketsToMultiplexer(void) {}
 
-void	EpollServer::run( void )
+void	EpollServer::run(void)
 {
 	throw runtimeEpollServerException("Epoll is not available on this platform.");
 }

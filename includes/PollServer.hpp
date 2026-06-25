@@ -1,25 +1,20 @@
 #ifndef POLLSERVER_HPP
 # define POLLSERVER_HPP
 
-#define MAX_EVENTS 64
-
 #include "WebServ.hpp"
 #include "AServer.hpp"
 
 class	PollServer: public AServer
 {
 	private:
-		#ifdef __APPLE__
-		int						_epoll_fd;
-		struct epoll_event			_event;
-		struct epoll_event			_active_events[MAX_EVENTS];
-		#endif
+		std::vector<struct pollfd>	_pollfds;
+		std::map<int, size_t>		_fd_to_poll_index;
 		
 		PollServer(PollServer const &other);
 		PollServer &operator=(PollServer const &other);
 
 		//+ --- Internal functionality ---
-		void	closePoll( void );
+		void	clearPollState(void);
 		void	addClientToMultiplexer( int fd );
 		void	removeFdFromMultiplexer( int fd );
 		void	watchForRead( int fd );
@@ -35,9 +30,9 @@ class	PollServer: public AServer
 		};
 
 		//+ --- Configuration and launching
-		void	initMultiplexer( void );
-		void	addSocketsToMultiplexer( void );
-		void	run( void );
+		void	initMultiplexer(void);
+		void	addSocketsToMultiplexer(void);
+		void	run(void);
 };
 
 #endif

@@ -1,16 +1,16 @@
 #include "./includes/WebServ.hpp"
 #include "./includes/GlobalConfig.hpp"
 #include "./includes/EpollServer.hpp"
+#include "./includes/PollServer.hpp"
 
-int	main( void )
+int	main(void)
 {
-
-	#ifndef __linux__
-
-	#endif
-
 	GlobalConfig	Config;
+	#ifdef __linux__
 	EpollServer 	Serv42;
+	#else
+	PollServer 		Serv42;
+	#endif
 
 	try
 	{

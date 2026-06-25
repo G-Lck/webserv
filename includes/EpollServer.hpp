@@ -19,7 +19,7 @@ class	EpollServer: public AServer
 		EpollServer &operator=( EpollServer const &other );
 
 		//+ --- Internal functionality ---
-		void	closeEpoll( void );
+		void	closeEpoll(void);
 		void	addClientToMultiplexer( int fd );
 		void	removeFdFromMultiplexer( int fd );
 		void	watchForRead( int fd );
@@ -35,9 +35,9 @@ class	EpollServer: public AServer
 		};
 
 		//+ --- Configuration and launching
-		void	initMultiplexer( void );
-		void	addSocketsToMultiplexer( void );
-		void	run( void );
+		void	initMultiplexer(void);
+		void	addSocketsToMultiplexer(void);
+		void	run(void);
 };
 
 #endif

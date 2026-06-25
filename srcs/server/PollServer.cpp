@@ -2,20 +2,11 @@
 
 // --------------- Orthodoxy ---------------
 
-PollServer::PollServer()
-{
-	#ifdef __APPLE__
-	this->_epoll_fd = -1;
-	memset(&_event, 0, sizeof(_event));
-	memset(_active_events, 0, sizeof(_active_events));
-	#endif
-}
+PollServer::PollServer() {}
 
 PollServer::~PollServer()
 {
-	#ifdef __APPLE__
-	closePoll();
-	#endif
+	clearPollState();
 }
 
 // --------------- Exceptions ---------------
@@ -23,118 +14,127 @@ PollServer::~PollServer()
 PollServer::runtimePollServerException::runtimePollServerException(const char* message)
 	: std::runtime_error(message) {}
 
-#ifdef __APPLE__
-
 // --------------- Set up Poll ---------------
 
-void	PollServer::initMultiplexer( void )
+void	PollServer::initMultiplexer(void)
 {
-	this->_epoll_fd = epoll_create(1);
-	if (this->_epoll_fd == -1)
-		throw runtimePollServerException("Error\nPoll init.");
+	clearPollState();
 }
 
-void	PollServer::addSocketsToMultiplexer( void )
+void	PollServer::addSocketsToMultiplexer(void)
 {
 	std::map<int, Socket*>::iterator it = this->_sockets.begin();
 	while (it != this->_sockets.end())
 	{
-		this->_event.events = EPOLLIN;
-		this->_event.data.fd = it->second->getFd();
-		if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, it->second->getFd(), &this->_event) == -1)
-			throw runtimePollServerException("Error\nepoll_ctl()");
+		struct pollfd pfd;
+		pfd.fd = it->second->getFd();
+		pfd.events = POLLIN;
+		pfd.revents = 0;
+		this->_fd_to_poll_index[pfd.fd] = this->_pollfds.size();
+		this->_pollfds.push_back(pfd);
 		++it;
 	}
 }
 
-void	PollServer::run( void )
+void	PollServer::run(void)
 {
 	while (1)
 	{
-		int fd_count = epoll_wait(this->_epoll_fd, this->_active_events, MAX_EVENTS, -1);
-		if (fd_count == -1)
+		if (this->_pollfds.empty())
+			throw runtimePollServerException("Error\nNo file descriptor to poll.");
+
+		int ready_count = poll(&this->_pollfds[0], this->_pollfds.size(), -1);
+		if (ready_count == -1)
 		{
 			if (errno == EINTR)
 				continue;
 			throw runtimePollServerException((std::string("Error fatal:\n") + strerror(errno)).c_str());
 		}
-		for (int i = 0; i < fd_count; ++i)
+
+		std::vector< std::pair<int, short> > triggered;
+		for (size_t i = 0; i < this->_pollfds.size(); ++i)
 		{
-			int current_fd = this->_active_events[i].data.fd;
+			if (this->_pollfds[i].revents == 0)
+				continue;
+			triggered.push_back(std::make_pair(this->_pollfds[i].fd, this->_pollfds[i].revents));
+			this->_pollfds[i].revents = 0;
+		}
+
+		for (size_t i = 0; i < triggered.size(); ++i)
+		{
+			int current_fd = triggered[i].first;
+			short events = triggered[i].second;
+
 			if (this->fdMatch(current_fd))
 			{
-				if (!this->addNewClient(current_fd))
-					continue;
+				if (events & POLLIN)
+					this->addNewClient(current_fd);
+				continue;
 			}
-			else if (this->_active_events[i].events & EPOLLIN)
+
+			if (this->_clients.find(current_fd) == this->_clients.end())
+				continue;
+
+			if (events & (POLLERR | POLLHUP | POLLNVAL))
 			{
+				this->clientDisconnect(current_fd);
+				continue;
+			}
+			if (events & POLLIN)
 				this->readRequest(current_fd);
-			}
-			else if (this->_active_events[i].events & EPOLLOUT)
-			{
+			if (this->_clients.find(current_fd) == this->_clients.end())
+				continue;
+			if (events & POLLOUT)
 				this->sendResponse(current_fd);
-			}
 		}
 	}
 }
 
 void	PollServer::addClientToMultiplexer( int fd )
 {
-	struct epoll_event client_ev;
-	client_ev.events = EPOLLIN;
-	client_ev.data.fd = fd;
-	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, fd, &client_ev) == -1)
-		throw runtimePollServerException("Error\nepoll_ctl()");
+	struct pollfd pfd;
+	pfd.fd = fd;
+	pfd.events = POLLIN;
+	pfd.revents = 0;
+	this->_fd_to_poll_index[fd] = this->_pollfds.size();
+	this->_pollfds.push_back(pfd);
 }
 
 void	PollServer::removeFdFromMultiplexer( int fd )
 {
-	epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
+	std::map<int, size_t>::iterator it = this->_fd_to_poll_index.find(fd);
+	if (it == this->_fd_to_poll_index.end())
+		return;
+
+	size_t index = it->second;
+	size_t last_index = this->_pollfds.size() - 1;
+	if (index != last_index)
+	{
+		this->_pollfds[index] = this->_pollfds[last_index];
+		this->_fd_to_poll_index[this->_pollfds[index].fd] = index;
+	}
+	this->_pollfds.pop_back();
+	this->_fd_to_poll_index.erase(it);
 }
 
 void	PollServer::watchForRead( int fd )
 {
-	struct epoll_event mod_ev;
-	mod_ev.events = EPOLLIN;
-	mod_ev.data.fd = fd;
-	epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &mod_ev);
+	std::map<int, size_t>::iterator it = this->_fd_to_poll_index.find(fd);
+	if (it == this->_fd_to_poll_index.end())
+		return;
+	this->_pollfds[it->second].events = POLLIN;
 }
 
 void	PollServer::watchForWrite( int fd )
 {
-	struct epoll_event mod_ev;
-	mod_ev.events = EPOLLOUT;
-	mod_ev.data.fd = fd;
-	epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &mod_ev);
+	std::map<int, size_t>::iterator it = this->_fd_to_poll_index.find(fd);
+	if (it == this->_fd_to_poll_index.end())
+		return;
+	this->_pollfds[it->second].events = POLLOUT;
 }
 
-void	PollServer::closePoll( void )
+void	PollServer::clearPollState(void)
 {
-	if (this->_epoll_fd != -1)
-		close(this->_epoll_fd);
-	this->_epoll_fd = -1;
+	this->_pollfds.clear();
+	this->_fd_to_poll_index.clear();
 }
-
-#else
-
-void	PollServer::initMultiplexer( void )
-{
-	throw runtimePollServerException("Poll is not available on this platform.");
-}
-
-void	PollServer::addSocketsToMultiplexer( void ) {}
-
-void	PollServer::run( void )
-{
-	throw runtimePollServerException("Poll is not available on this platform.");
-}
-
-void	PollServer::addClientToMultiplexer( int ) {}
-
-void	PollServer::removeFdFromMultiplexer( int ) {}
-
-void	PollServer::watchForRead( int ) {}
-
-void	PollServer::watchForWrite( int ) {}
-
-#endif
