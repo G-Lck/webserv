@@ -15,7 +15,8 @@ SRC = \
 		srcs/config/ServerConfig.cpp \
 		srcs/config/LocationConfig.cpp \
 		srcs/client/Client.cpp \
-		srcs/requests/HttpRequest.cpp
+		srcs/requests/HttpRequest.cpp \
+		srcs/requests/HttpException.cpp
 
 OBJ = $(SRC:.cpp=.o)
 
