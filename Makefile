@@ -17,7 +17,8 @@ SRC = \
 		srcs/client/Client.cpp \
 		srcs/requests/HttpRequest.cpp \
 		srcs/parse/ParseConfig.cpp \
-		srcs/utils/utils.cpp
+		srcs/utils/utils.cpp \
+		srcs/requests/HttpException.cpp
 
 OBJ = $(SRC:.cpp=.o)
 

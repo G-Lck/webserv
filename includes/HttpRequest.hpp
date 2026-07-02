@@ -1,17 +1,19 @@
 #ifndef HTTPREQUEST_HPP
 #define HTTPREQUEST_HPP
 
-#include <string>
+#include "WebServ.hpp"
+#include "HttpException.hpp"
+
 
 class HttpRequest {
 
 	private:
 
-		std::string method; // GET POST...
-		std::string path; // /home/images/...
-		std::string version; // HTTP//1.1
-		std::map<std::string, std::string> headers;
-		std::string body;
+		std::string _method; // GET POST...
+		std::string _path; // /home/images/...
+		std::string _version; // HTTP//1.1
+		std::map<std::string, std::string> _headers;
+		std::string _body;
 
 		void parseRequestLine(const std::string& line);
 		void parseHeaders(const std::string& raw);
@@ -20,10 +22,11 @@ class HttpRequest {
 	public:
 
 		HttpRequest();
-		HttpRequesrt(const HttpRequest& other);
-		HttpRequesrt& operator=(const HttpRequesrt& other);
-		~HttpRequesrt();
+		HttpRequest(const HttpRequest& other);
+		HttpRequest& operator=(const HttpRequest& other);
+		~HttpRequest();
 		bool parse(const std::string& raw);
+
 };
 
 #endif

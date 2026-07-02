@@ -7,11 +7,11 @@ HttpRequest::HttpRequest(const HttpRequest& other) { *this = other; }
 HttpRequest& HttpRequest::operator=(const HttpRequest& other) {
 	if (this != &other)
 	{
-		this->method = other.method;
-		this->path = other.path;
-		this->version = other.version;
-		this->headers = other.headers;
-		this->body = other.body;
+		this->_method = other._method;
+		this->_path = other._path;
+		this->_version = other._version;
+		this->_headers = other._headers;
+		this->_body = other._body;
 	}
 	return *this;
 }
@@ -20,43 +20,29 @@ HttpRequest::~HttpRequest() {}
 
 void	HttpRequest::parseRequestLine(const std::string& line)
 {
-	size_t	len;
-	
-	len = line.find(line, ' ');
-	this->method = line.substr(0, len);
-	line.erase(line, len);
+	std::istringstream ss(line);
+	std::string method, path, version, extra;
+	ss >> method;
+	ss >> path;
+	ss >> version;
 
-	len = line.find(line, ' ');
-	this->path = line.substr(0, len);
-	line.erase(line, len);
-
-	len = line.find(line, ' ');
-	this->version = line.substr(0, len);
-	line.erase(line, len);
+	if (ss >> extra)
+		throw HttpException(400, "Bad Request");
 
 	//we will have to throw exception if one of them is wrong;
 }
 
 void	HttpRequest::parseHeaders(const std::string& raw)
 {
-	size_t	len;
-
-	while (1)
-	{
-		len = line.find(line, ' ');
-		this->headers.insert(line.substr(0, len));
-		line.erase(line, len);
-		//break at some point
-	}
-
+	(void) 	raw;
 	//I think we will also have to check a lot and return execption.
 }
 
 bool	HttpRequest::parseBody(const std::string& raw)
 {
-	this->body = raw;
+	this->_body = raw;
 	//clearly more than that to do
-	return (true)
+	return (true);
 }
 
 bool HttpRequest::parse(const std::string& raw) {
@@ -69,15 +55,15 @@ bool HttpRequest::parse(const std::string& raw) {
     parseHeaders(raw.substr(0, header_end));
 
 
-    if (headers.count("Content-Length")) {
-        size_t body_len   = atoi(headers["Content-Length"].c_str());
+    if (this->_headers.count("Content-Length")) {
+        size_t body_len   = atoi(this->_headers["Content-Length"].c_str());
         size_t body_start = header_end + 4;
         size_t received   = raw.size() - body_start;
 
         if (received < body_len)
             return false;
 
-        body = raw.substr(body_start, body_len);
+        this->_body = raw.substr(body_start, body_len);
     }
 
     return true;
