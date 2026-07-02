@@ -11,13 +11,15 @@ class HttpRequest {
 
 		std::string _method; // GET POST...
 		std::string _path; // /home/images/...
+		std::string _query_string;
 		std::string _version; // HTTP//1.1
 		std::map<std::string, std::string> _headers;
 		std::string _body;
 
-		void parseRequestLine(const std::string& line);
-		void parseHeaders(const std::string& raw);
-		bool parseBody(const std::string& raw);
+		void	parseRequestLine(const std::string& line);
+		void	parseHeaders(const std::string& raw);
+		bool	parseBody(const std::string& raw);
+		bool	parseChunkedBody(const std::string& raw);
 
 	public:
 
