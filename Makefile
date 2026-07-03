@@ -23,6 +23,7 @@ all: $(NAME)
 
 $(NAME) : $(OBJ)
 		$(CPP) $(FLAGS) $(OBJ) -o $@
+		./config/generate-config.sh
 
 %.o : %.cpp
 		$(CPP) $(FLAGS) -c $< -o $@
@@ -31,6 +32,7 @@ clean:
 		rm -f $(OBJ)
 fclean: clean
 		rm -f $(NAME)
+		rm -rf config/configs
 re: fclean all
 
 .PHONY: all clean fclean re

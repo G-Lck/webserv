@@ -41,8 +41,8 @@ std::string	ParseConfig::getFileText( const char* dir_c )
 	}
 	if (text.empty())
 		throw ParseErrException("Error\nEmpty File");
-	if (!validBrackets(text))
-		throw ParseErrException("Error\nUnclosed Brackets {}");
+//	if (!validBrackets(text))
+//		throw ParseErrException("Error\nUnclosed Brackets {}");
 	return (text);
 }
 

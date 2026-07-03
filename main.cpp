@@ -5,14 +5,13 @@
 
 int	main( int ac, char **av )
 {
-	if (ac != 2)
+	if (ac < 2)
 	{
-		std::cout << "Wrong amount of parameters\nExpected [dir-to-config-file] or --test-config or --test-http" << std::endl;
+		std::cout << "Wrong amount of parameters\nExpected [dir-to-config-file]. \nOr Flag --test-config to test parsing" << std::endl;
 		return (-1);
 	}
 	ParseConfig		Parse(av[1]);
 	GlobalConfig	Config;
-	Server 			Serv42;
 
 	try
 	{
@@ -30,17 +29,21 @@ int	main( int ac, char **av )
 		printConfig(Config, 0);
 		return (1);
 	}
-	
-	try
-	{
-		Serv42.configServer(Config);
-	}
-	catch(const std::exception& e)
-	{
-		std::cerr << e.what() << '\n';
-	}
 
-	Serv42.epollInit();
-	Serv42.epollAddSockets();
-	Serv42.initServer();
+	if (ac < 3)
+	{
+		Server 			Serv42;
+		try
+		{
+			Serv42.configServer(Config);
+		}
+		catch(const std::exception& e)
+		{
+			std::cerr << e.what() << '\n';
+		}
+	
+		Serv42.epollInit();
+		Serv42.epollAddSockets();
+		Serv42.initServer();
+	}
 }

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+cd "$(dirname "${BASH_SOURCE[0]}")" || exit 1
+
 mkdir -p configs/valid configs/invalid
 
 # ─── VALID 1: simple single server ───────────────────────────────────────────
@@ -238,6 +240,186 @@ server {
 }
 EOF
 
+# ─── VALID 4: grouped error codes sharing one path ────────────────────────────
+cat > configs/valid/valid4_grouped_error_pages.conf << 'EOF'
+server {
+    listen 8080;
+    server_name localhost;
+    root /var/www/html;
+    error_page 500 502 503 504 /50x.html;
+
+    location / {
+        limit_except GET;
+    }
+}
+EOF
+
+# ─── VALID 5: server block with no global directives at all ──────────────────
+cat > configs/valid/valid5_minimal_no_global_directives.conf << 'EOF'
+server {
+    listen 3000;
+    root /var/www/minimal;
+
+    location / {
+        limit_except GET;
+    }
+}
+EOF
+
+# ─── VALID 6: nginx-style catch-all server_name ───────────────────────────────
+cat > configs/valid/valid6_wildcard_server_name.conf << 'EOF'
+server {
+    listen 8080;
+    server_name _;
+    root /var/www/html;
+
+    location / {
+        limit_except GET;
+    }
+}
+EOF
+
+# ─── VALID 7: allow_methods alias + upload_path ───────────────────────────────
+cat > configs/valid/valid7_allow_methods_and_upload_path.conf << 'EOF'
+server {
+    listen 8080;
+    server_name localhost;
+    root /var/www/html;
+
+    location /upload {
+        allow_methods POST;
+        upload_path /var/www/uploads;
+    }
+}
+EOF
+
+# ─── VALID 8: comments and blank lines interleaved ────────────────────────────
+cat > configs/valid/valid8_comments_and_blank_lines.conf << 'EOF'
+# Top level comment
+root /var/www/html;
+# another comment
+index index.html;
+
+server {
+    # server-level comment
+    listen 8080;
+    server_name localhost;
+    root /var/www/html;
+
+    location / {
+        limit_except GET;
+    }
+}
+EOF
+
+# ─── VALID 9: redirect-only location ──────────────────────────────────────────
+cat > configs/valid/valid9_return_redirect_location.conf << 'EOF'
+server {
+    listen 8080;
+    server_name localhost;
+    root /var/www/html;
+
+    location /old-page {
+        return 308 /new-page;
+    }
+}
+EOF
+
+# ─── INVALID 11: empty root value ─────────────────────────────────────────────
+cat > configs/invalid/invalid11_empty_root_value.conf << 'EOF'
+server {
+    listen 8080;
+    server_name localhost;
+    root ;
+}
+EOF
+
+# ─── INVALID 12: root value not absolute ──────────────────────────────────────
+cat > configs/invalid/invalid12_root_not_absolute.conf << 'EOF'
+server {
+    listen 8080;
+    server_name localhost;
+    root var/www/html;
+}
+EOF
+
+# ─── INVALID 13: error_page code below the accepted range ────────────────────
+cat > configs/invalid/invalid13_error_code_out_of_range_low.conf << 'EOF'
+server {
+    listen 8080;
+    server_name localhost;
+    root /var/www/html;
+    error_page 200 /ok.html;
+
+    location / {
+        limit_except GET;
+    }
+}
+EOF
+
+# ─── INVALID 14: listen host with invalid characters ──────────────────────────
+cat > configs/invalid/invalid14_listen_invalid_host_chars.conf << 'EOF'
+server {
+    listen bad_host:8080;
+    server_name localhost;
+    root /var/www/html;
+}
+EOF
+
+# ─── INVALID 15: location missing opening brace ───────────────────────────────
+cat > configs/invalid/invalid15_location_missing_open_brace.conf << 'EOF'
+server {
+    listen 8080;
+    server_name localhost;
+    root /var/www/html;
+
+    location /foo
+    limit_except GET;
+}
+EOF
+
+# ─── INVALID 16: return directive with disallowed code ────────────────────────
+cat > configs/invalid/invalid16_return_invalid_code.conf << 'EOF'
+server {
+    listen 8080;
+    server_name localhost;
+    root /var/www/html;
+
+    location /old {
+        return 200 /new;
+    }
+}
+EOF
+
+# ─── INVALID 17: upload_path not absolute ─────────────────────────────────────
+cat > configs/invalid/invalid17_upload_path_not_absolute.conf << 'EOF'
+server {
+    listen 8080;
+    server_name localhost;
+    root /var/www/html;
+
+    location /upload {
+        limit_except POST;
+        upload_path uploads;
+    }
+}
+EOF
+
+# ─── INVALID 18: duplicate cgi_handler directive ──────────────────────────────
+cat > configs/invalid/invalid18_cgi_duplicate.conf << 'EOF'
+server {
+    listen 8080;
+    server_name localhost;
+    root /var/www/html;
+    cgi_handler .php /usr/bin/php;
+    cgi_handler .py /usr/bin/python3;
+
+    location / {
+        limit_except GET;
+    }
+}
+EOF
+
 echo "Generated:"
-echo "  configs/valid/   -> 3 files"
-echo "  configs/invalid/ -> 10 files"
+echo "  configs/valid/   -> 9 files"
+echo "  configs/invalid/ -> 18 files"
