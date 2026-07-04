@@ -280,3 +280,25 @@ void	Server::sendResponse( int fd )
     if (c->getWriteBuffer().empty())
         this->setEpollInOut(fd, EPOLLIN);
 }
+
+
+/*
+*	TO FIX
+AServer.cpp
+
+Check fcntl return value
+extract_request(c) return value discarded — bug or dead code
+Cap read buffer size (no client_max_body_size check yet → OOM risk)
+No EPOLLERR/EPOLLHUP check on send failures
+
+EpollServer.cpp
+5. No EPOLLERR/EPOLLHUP handling in run() — dead fd sits in epoll forever
+6. Drop the #else (non-Linux) branch if you're not actually targeting kqueue/macOS — dead code
+7. watchForRead/watchForWrite fully replace events (no simultaneous IN+OUT) — fine for req/response, but blocks pipelining overlap, confirm it's intentional
+Structural / next steps
+8. run() only distinguishes listener fd vs client fd — no third category for CGI pipe fds
+9. Define who owns process_and_build_response — right now hardcoded
+10. CGI pipes must be registered in the same epoll multiplexer, non-blocking
+11. Need waitpid/timeout handling for CGI child processes (zombies + hangs)
+12. Location matching (host+URI → location block) not yet wired into request handling
+*/
