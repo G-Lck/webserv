@@ -2,7 +2,7 @@
 
 bool request_is_complete(Client* client)
 {
-    if (client->getReadBuffer().find("\r\n\r\n") != std::string::npos)
+    if (client->getReadBuffer().find("aaa") != std::string::npos)
         return true;
     return false;
 }

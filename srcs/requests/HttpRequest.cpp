@@ -30,7 +30,7 @@ void	HttpRequest::parseRequestLine(const std::string& line)
 	if (ss >> extra)
 		throw HttpException(400, "Bad Request");
 
-	if (!(method == "GET" || method == "POST" || method == "DELETE"))
+	if (!(method == "GET" || method == "POST" || method == "DELETE")) // faire un test si il y a un truc apres post
 		throw HttpException(400, "Bad Request");
 	this->_method = method;
 
@@ -76,7 +76,7 @@ bool HttpRequest::parseBody(const std::string& body_raw)
 {
 	size_t	body_len = atoi(_headers["Content-Length"].c_str());
 	
-	if (body_len > MAX_BODY_SIZE)
+	if (body_len > MAX_BODY_SIZE) // should be something form config file
 		throw HttpException(413, "Content Too Large");
 	
 	if (body_raw.size() < body_len)
@@ -86,7 +86,7 @@ bool HttpRequest::parseBody(const std::string& body_raw)
 	return true;
 }
 
-bool HttpRequest::parseChunkedBody(const std::string& raw)
+bool HttpRequest::parseChunkedBody(const std::string& raw) // we should check the max size
 {
     std::string result;
     size_t pos = 0;
