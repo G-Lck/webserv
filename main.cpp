@@ -1,12 +1,10 @@
 #include "./includes/WebServ.hpp"
 #include "./includes/GlobalConfig.hpp"
-#include "./includes/Server.hpp"
 #include "./includes/ParseConfig.hpp"
 #include "./includes/EpollServer.hpp"
 #include "./includes/PollServer.hpp"
 
 int	main( int ac, char **av )
-int	main(void)
 {
 	if (ac < 2)
 	{
@@ -33,22 +31,6 @@ int	main(void)
 		return (1);
 	}
 
-	if (ac < 3)
-	{
-		Server 			Serv42;
-		try
-		{
-			Serv42.configServer(Config);
-		}
-		catch(const std::exception& e)
-		{
-			std::cerr << e.what() << '\n';
-		}
-	
-		Serv42.epollInit();
-		Serv42.epollAddSockets();
-		Serv42.initServer();
-	}
 	#ifdef __linux__
 	EpollServer 	Serv42;
 	#else
