@@ -12,7 +12,7 @@ autoindex off;
 client_max_body_size 10000;
 
 server {
-    listen 8080;
+    listen 8085;
     server_name localhost;
     root /var/www/html;
     index index.html index.htm;

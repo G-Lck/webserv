@@ -1,7 +1,8 @@
 #ifndef HTTPREQUEST_HPP
 #define HTTPREQUEST_HPP
 
-#include "WebServ.hpp"
+#include <string>
+#include <map>
 #include "HttpException.hpp"
 
 
@@ -28,6 +29,8 @@ class HttpRequest {
 		HttpRequest& operator=(const HttpRequest& other);
 		~HttpRequest();
 		bool parse(const std::string& raw);
+
+		void	printRequest() const;
 
 };
 

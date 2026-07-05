@@ -1,4 +1,5 @@
 #include "../../includes/HttpRequest.hpp"
+#include "../../includes/WebServ.hpp"
 
 HttpRequest::HttpRequest() {}
 
@@ -117,18 +118,43 @@ bool HttpRequest::parseChunkedBody(const std::string& raw) // we should check th
 
 bool HttpRequest::parse(const std::string& raw)
 {
+	std::cout << "http request parser begin" << std::endl;
+
 	size_t	header_end = raw.find("\r\n\r\n");
 
 	if (header_end == std::string::npos)
 		return false;
 
-	size_t 	first_line_end = raw.find("\r\n");
-	parseRequestLine(raw.substr(0, first_line_end));
-	parseHeaders(raw.substr(first_line_end + 2, header_end - first_line_end - 2));
-	if (_headers.count("Transfer-Encoding") && _headers["Transfer-Encoding"] == "chunked")
-    	return parseChunkedBody(raw.substr(header_end + 4));
-	else if (_headers.count("Content-Length"))
-    	return parseBody(raw.substr(header_end + 4));
-	
+	try
+	{
+		size_t 	first_line_end = raw.find("\r\n");
+		parseRequestLine(raw.substr(0, first_line_end));
+		parseHeaders(raw.substr(first_line_end + 2, header_end - first_line_end - 2));
+		if (_headers.count("Transfer-Encoding") && _headers["Transfer-Encoding"] == "chunked")
+			return parseChunkedBody(raw.substr(header_end + 4));
+		else if (_headers.count("Content-Length"))
+			return parseBody(raw.substr(header_end + 4));
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << e.what() << '\n';
+	}
+	std::cout << "http request parser over" << std::endl;
 	return true;
+}
+
+void	HttpRequest::printRequest() const
+{
+	std::cout << "method: " << _method << std::endl;
+	std::cout << "path: " << _path << std::endl;
+	std::cout << "query string: " << _query_string << std::endl;
+	std::cout << "version: " << _version << std::endl;
+	std::cout << "Headers: " << std::endl;
+	for (std::map<std::string, std::string>::const_iterator it = _headers.begin(); it != _headers.end(); ++it)
+	{
+		std::cout << it->first << ": " << it->second << std::endl;
+	}
+	std::cout << "Body" << std::endl << _body << std::endl;
+
+
 }

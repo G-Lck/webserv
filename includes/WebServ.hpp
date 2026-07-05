@@ -18,6 +18,7 @@
 #include <cstring>      // std::memset(), std::strlen()
 #include <utility>		// std::pair
 #include <map>			// std::map
+#include <deque>		// std::deque
 #include <stdexcept>	// exceptions
 #include <algorithm>
 #include <cerrno>  		// Required to read the 'errno' variable
