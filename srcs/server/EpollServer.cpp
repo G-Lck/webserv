@@ -137,7 +137,7 @@ void	EpollServer::closeEpoll(void)
 
 #else
 
-bool	EpollServer::initMultiplexer(void)
+void	EpollServer::initMultiplexer(void)
 {
 	throw runtimeEpollServerException("Epoll is not available on this platform.");
 }
@@ -149,7 +149,7 @@ void	EpollServer::run(void)
 	throw runtimeEpollServerException("Epoll is not available on this platform.");
 }
 
-void	EpollServer::addClientToMultiplexer( int ) {}
+bool	EpollServer::addClientToMultiplexer( int ) {return true;}
 
 void	EpollServer::removeFdFromMultiplexer( int ) {}
 
