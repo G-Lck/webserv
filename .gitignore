@@ -1,4 +1,6 @@
 *.conf
 *.o
+*/*.o
+*/*/*.o
 *.log
 ./WebServ
