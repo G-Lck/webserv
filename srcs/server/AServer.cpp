@@ -103,7 +103,12 @@ bool	AServer::addNewClient( int curr_socket_fd )
 		std::cout << "accept() failed: " << strerror(errno) << std::endl;
 		return (false);
 	}
-	fcntl(fd_client, F_SETFL, O_NONBLOCK);
+	if (fcntl(fd_client, F_SETFL, O_NONBLOCK) == -1)
+	{
+		std::cout << "fcntl() failed: " << strerror(errno) << std::endl;
+		close(fd_client);
+		return (false);
+	}
 	this->_fd_to_route[fd_client] = this->_fd_to_route[curr_socket_fd];
 
 	Client *newClient = new Client(fd_client);

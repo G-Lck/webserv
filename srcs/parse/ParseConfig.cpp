@@ -439,7 +439,10 @@ void	ParseConfig::parseMaxBody(std::vector<std::string>::iterator &it, T &config
 	if ((*it).find_first_not_of("0123456789") != std::string::npos) //+ Check if numeric
 		throw ParseErrException("Error\nMax body value needs to be a number.");
 
-	int	code = std::atoi((*it).c_str());
+	char *end;
+	long code = std::strtol((*it).c_str(), &end, 10);
+	if (code < 0 || code > MAX_BODY)
+		throw ParseErrException("Error\nMax body value out of range.");
 	config.setClientMaxBodySize(code);
 
 	it++; // Skip value

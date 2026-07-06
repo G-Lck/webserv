@@ -9,6 +9,8 @@
 #define PURPLE  "\033[35m"
 #define YELLOW  "\033[33m"
 
+#define MAX_BODY 104857600 // 10MB
+
 // --- C++ Standard Core ---
 #include <iostream>     // std::cout, std::cerr
 #include <string>       // std::string
