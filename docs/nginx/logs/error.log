@@ -1,0 +1,44 @@
+2026/07/04 13:17:57 [notice] 2190#0: using the "kqueue" event method
+2026/07/04 13:17:57 [notice] 2190#0: nginx/1.31.2
+2026/07/04 13:17:57 [notice] 2190#0: built by clang 21.0.0 (clang-2100.0.123.102)
+2026/07/04 13:17:57 [notice] 2190#0: OS: Darwin 25.5.0
+2026/07/04 13:17:57 [notice] 2190#0: hw.ncpu: 10
+2026/07/04 13:17:57 [notice] 2190#0: net.inet.tcp.sendspace: 131072
+2026/07/04 13:17:57 [notice] 2190#0: kern.ipc.somaxconn: 128
+2026/07/04 13:17:57 [notice] 2190#0: hw.cachelinesize: 128
+2026/07/04 13:17:57 [notice] 2190#0: getrlimit(RLIMIT_NOFILE): 1048575:9223372036854775807
+2026/07/04 13:17:57 [notice] 2191#0: start worker processes
+2026/07/04 13:17:57 [notice] 2191#0: start worker process 2192
+2026/07/04 13:17:57 [info] 2192#0: *1 kevent() reported that client 127.0.0.1 closed keepalive connection
+2026/07/04 13:17:57 [info] 2192#0: *2 kevent() reported that client 127.0.0.1 closed keepalive connection
+2026/07/04 13:17:57 [info] 2192#0: *3 kevent() reported that client 127.0.0.1 closed keepalive connection
+2026/07/04 13:17:57 [info] 2192#0: *4 kevent() reported that client 127.0.0.1 closed keepalive connection
+2026/07/04 13:17:57 [notice] 2191#0: signal 15 (SIGTERM) received from 2216, exiting
+2026/07/04 13:17:57 [notice] 2192#0: exiting
+2026/07/04 13:17:57 [notice] 2191#0: signal 23 (SIGIO) received from 2192
+2026/07/04 13:17:57 [notice] 2192#0: exit
+2026/07/04 13:17:57 [notice] 2191#0: signal 20 (SIGCHLD) received from 2192
+2026/07/04 13:17:57 [notice] 2191#0: worker process 2192 exited with code 0
+2026/07/04 13:17:57 [notice] 2191#0: exit
+2026/07/04 13:25:09 [notice] 2978#0: using the "kqueue" event method
+2026/07/04 13:25:09 [notice] 2978#0: nginx/1.31.2
+2026/07/04 13:25:09 [notice] 2978#0: built by clang 21.0.0 (clang-2100.0.123.102)
+2026/07/04 13:25:09 [notice] 2978#0: OS: Darwin 25.5.0
+2026/07/04 13:25:09 [notice] 2978#0: hw.ncpu: 10
+2026/07/04 13:25:09 [notice] 2978#0: net.inet.tcp.sendspace: 131072
+2026/07/04 13:25:09 [notice] 2978#0: kern.ipc.somaxconn: 128
+2026/07/04 13:25:09 [notice] 2978#0: hw.cachelinesize: 128
+2026/07/04 13:25:09 [notice] 2978#0: getrlimit(RLIMIT_NOFILE): 1048575:9223372036854775807
+2026/07/04 13:25:09 [notice] 2979#0: start worker processes
+2026/07/04 13:25:09 [notice] 2979#0: start worker process 2980
+2026/07/04 13:25:09 [info] 2980#0: *1 kevent() reported that client 127.0.0.1 closed keepalive connection
+2026/07/04 13:25:09 [info] 2980#0: *2 kevent() reported that client 127.0.0.1 closed keepalive connection
+2026/07/04 13:25:09 [info] 2980#0: *3 kevent() reported that client 127.0.0.1 closed keepalive connection
+2026/07/04 13:25:09 [info] 2980#0: *4 kevent() reported that client 127.0.0.1 closed keepalive connection
+2026/07/04 13:25:09 [notice] 2979#0: signal 15 (SIGTERM) received from 3004, exiting
+2026/07/04 13:25:09 [notice] 2980#0: exiting
+2026/07/04 13:25:09 [notice] 2979#0: signal 23 (SIGIO) received from 2980
+2026/07/04 13:25:09 [notice] 2980#0: exit
+2026/07/04 13:25:09 [notice] 2979#0: signal 20 (SIGCHLD) received from 2980
+2026/07/04 13:25:09 [notice] 2979#0: worker process 2980 exited with code 0
+2026/07/04 13:25:09 [notice] 2979#0: exit

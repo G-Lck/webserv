@@ -1,5 +1,6 @@
 #ifndef HTTPREQUEST_HPP
 #define HTTPREQUEST_HPP
+#define HTTPREQUEST_HPP
 
 #include <string>
 #include <map>
@@ -25,7 +26,10 @@ class HttpRequest {
 
 	public:
 
+
 		HttpRequest();
+		HttpRequest(const HttpRequest& other);
+		HttpRequest& operator=(const HttpRequest& other);
 		HttpRequest(const HttpRequest& other);
 		HttpRequest& operator=(const HttpRequest& other);
 		~HttpRequest();
