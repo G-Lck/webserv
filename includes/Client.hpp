@@ -1,11 +1,10 @@
 #ifndef CLIENT_HPP
 #define CLIENT_HPP
 
-#include <ctime>
-#include <cstddef>
-#include <string>
-#include <deque>
+#include "WebServ.hpp"
 #include "HttpRequest.hpp"
+
+class HttpRequest;
 
 class Client
 {

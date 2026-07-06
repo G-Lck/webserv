@@ -1,7 +1,4 @@
-#include "../../includes/WebServ.hpp"
-#include "../../includes/GlobalConfig.hpp"
-#include "../../includes/ServerConfig.hpp"
-#include "../../includes/LocationConfig.hpp"
+#include "../../includes/utils.hpp"
 
 bool validBrackets(const std::string &text)
 {

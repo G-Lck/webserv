@@ -1,10 +1,10 @@
 #ifndef UTILS_HPP
 # define UTILS_HPP
 
-#include <string>
-
-class Client;
-class GlobalConfig;
+#include "WebServ.hpp"
+#include "Client.hpp"
+#include "Log.hpp"
+#include "GlobalConfig.hpp"
 
 bool			request_is_complete( Client *client );
 

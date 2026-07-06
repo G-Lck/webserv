@@ -6,6 +6,8 @@
 #include "Client.hpp"
 #include "Types.hpp"
 #include "GlobalConfig.hpp"
+#include "Log.hpp"
+#include "utils.hpp"
 
 class	AServer
 {

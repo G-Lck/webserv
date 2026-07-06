@@ -1,5 +1,4 @@
 #include "../../includes/HttpRequest.hpp"
-#include "../../includes/WebServ.hpp"
 
 HttpRequest::HttpRequest(): _consumed_bytes(0) {}
 

@@ -25,6 +25,8 @@
 #include <cstring> 		// Required for strerror()
 #include <fstream>
 #include <sstream>		// to us istringstream easier to split on spaces
+#include <cstddef>		// core fundamental types and macros
+
 
 // --- POSIX Sockets & Network ---
 #include <sys/socket.h> // socket(), bind(), listen(), accept(), send(), recv(), setsockopt()
@@ -43,8 +45,12 @@
 #include <sys/stat.h>   // stat() (to check if an HTML file exists before serving)
 #include <dirent.h>     // opendir(), readdir(), closedir() (for autoindex)
 
+// --- POSIX signals ---
 #include <signal.h>
-#include "utils.hpp"
+
+// --- POSIX time ---
+#include <ctime>
+
 
 class GlobalConfig;
 

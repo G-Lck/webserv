@@ -3,6 +3,8 @@
 #include "./includes/ParseConfig.hpp"
 #include "./includes/EpollServer.hpp"
 #include "./includes/PollServer.hpp"
+#include "./includes/Log.hpp"
+#include "./includes/utils.hpp"
 
 int	main( int ac, char **av )
 {
