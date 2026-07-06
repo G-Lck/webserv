@@ -1,7 +1,7 @@
 #include "../../includes/HttpRequest.hpp"
 #include "../../includes/WebServ.hpp"
 
-HttpRequest::HttpRequest() {}
+HttpRequest::HttpRequest(): _consumed_bytes(0) {}
 
 HttpRequest::HttpRequest(const HttpRequest& other) { *this = other; }
 
@@ -14,6 +14,7 @@ HttpRequest& HttpRequest::operator=(const HttpRequest& other) {
 		this->_version = other._version;
 		this->_headers = other._headers;
 		this->_body = other._body;
+		this->_consumed_bytes = other._consumed_bytes;
 	}
 	return *this;
 }
@@ -82,8 +83,8 @@ bool HttpRequest::parseBody(const std::string& body_raw)
 	
 	if (body_raw.size() < body_len)
 		return false;
-	
-   this-> _body = body_raw.substr(0, body_len);
+	this-> _body = body_raw.substr(0, body_len);
+	this->_consumed_bytes += body_len;
 	return true;
 }
 
@@ -103,6 +104,7 @@ bool HttpRequest::parseChunkedBody(const std::string& raw) // we should check th
 
         if (chunk_size == 0)
 		{
+            this->_consumed_bytes += chunk_end + 4; // "0\r\n\r\n"
             this->_body = result;
             return true;
         }
@@ -119,28 +121,31 @@ bool HttpRequest::parseChunkedBody(const std::string& raw) // we should check th
 bool HttpRequest::parse(const std::string& raw)
 {
 	std::cout << "http request parser begin" << std::endl;
+	this->_consumed_bytes = 0;
 
 	size_t	header_end = raw.find("\r\n\r\n");
 
 	if (header_end == std::string::npos)
 		return false;
 
-	try
-	{
-		size_t 	first_line_end = raw.find("\r\n");
-		parseRequestLine(raw.substr(0, first_line_end));
-		parseHeaders(raw.substr(first_line_end + 2, header_end - first_line_end - 2));
-		if (_headers.count("Transfer-Encoding") && _headers["Transfer-Encoding"] == "chunked")
-			return parseChunkedBody(raw.substr(header_end + 4));
-		else if (_headers.count("Content-Length"))
-			return parseBody(raw.substr(header_end + 4));
-	}
-	catch (const std::exception& e)
-	{
-		std::cerr << e.what() << '\n';
-	}
+	this->_consumed_bytes = header_end + 4;
+
+	size_t	first_line_end = raw.find("\r\n");
+	parseRequestLine(raw.substr(0, first_line_end));
+	parseHeaders(raw.substr(first_line_end + 2, header_end - first_line_end - 2));
+
+	if (_headers.count("Transfer-Encoding") && _headers["Transfer-Encoding"] == "chunked")
+		return parseChunkedBody(raw.substr(header_end + 4));
+	else if (_headers.count("Content-Length"))
+		return parseBody(raw.substr(header_end + 4));
+
 	std::cout << "http request parser over" << std::endl;
 	return true;
+}
+
+int	HttpRequest::getConsumedBytes() const
+{
+	return this->_consumed_bytes;
 }
 
 void	HttpRequest::printRequest() const

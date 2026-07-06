@@ -31,6 +31,7 @@ class Client
 	void	appendToWriteBuffer(const std::string& data);
 	void	eraseWriteBuffer(size_t n);
 	void	clearReadBuffer();
+	void	eraseFromReadBuffer(size_t n);
 	void	clearWriteBuffer();
 	bool	parseBufferedRequest();
 	void	resetCurrentRequest();

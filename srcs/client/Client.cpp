@@ -47,6 +47,14 @@ void	Client::clearReadBuffer()
 	this->_read_buffer.clear();
 }
 
+void	Client::eraseFromReadBuffer(size_t n)
+{
+	if (n >= this->_read_buffer.size())
+		this->_read_buffer.clear();
+	else
+		this->_read_buffer.erase(0, n);
+}
+
 void	Client::clearWriteBuffer()
 {
 	this->_write_buffer.clear();

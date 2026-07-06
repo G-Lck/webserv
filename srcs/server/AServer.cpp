@@ -134,7 +134,7 @@ void	AServer::readRequest(int fd)
 	{
 		Client* c = _clients[fd];
 		c->appendToReadBuffer(buffer, bytes_read);
-		while (c->parseBufferedRequest())
+		while (c->parseBufferedRequest() == true)
 			this->handleCompleteRequest(fd);
 	}
 }

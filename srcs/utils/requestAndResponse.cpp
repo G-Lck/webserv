@@ -20,5 +20,6 @@ std::string process_and_build_response(Client* client)
 
 void erase_request_from_buffer(Client* client)
 {
-    client->clearReadBuffer();
+    int consumed = client->getRequest().getConsumedBytes();
+    client->eraseFromReadBuffer(consumed);
 }

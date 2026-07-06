@@ -16,6 +16,7 @@ class HttpRequest {
 		std::string _version; // HTTP//1.1
 		std::map<std::string, std::string> _headers;
 		std::string _body;
+		int			_consumed_bytes;
 
 		void	parseRequestLine(const std::string& line);
 		void	parseHeaders(const std::string& raw);
@@ -30,6 +31,7 @@ class HttpRequest {
 		~HttpRequest();
 		bool parse(const std::string& raw);
 
+		int	getConsumedBytes() const;
 		void	printRequest() const;
 
 };
