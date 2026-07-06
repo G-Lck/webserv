@@ -8,7 +8,7 @@
 ///
 /// @
 
-void	logError( const std::string& errMsg, int flag )
+void	logError( const std::string errMsg, int flag )
 {
 	if (flag == ACCESS)
 	{
@@ -23,11 +23,15 @@ void	logError( const std::string& errMsg, int flag )
 			{
 				std::ofstream outfile_info("./log/error_info.log", std::ios::app);
 				outfile_info << errMsg;
+				break ;
 			}
 			case ERROR_WARNING:
 			{
+				std::ofstream outfile_info("./log/error_info.log", std::ios::app);
+				outfile_info << errMsg;
 				std::ofstream outfile_warning("./log/error_warning.log", std::ios::app);
 				outfile_warning << errMsg;
+				break ;
 			}
 			default:
 				break;

@@ -25,6 +25,7 @@ int	main( int ac, char **av )
 	{
 		Parse.parse(Config);
 		printConfig(Config, 1);
+		logError(stringifyConfig(Config, 1), 1);
 		//+ CHECK PARSE FUNCTION MISSING:
 		//	- check if root is not empty
 		//	- check at least one server

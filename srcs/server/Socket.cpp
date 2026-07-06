@@ -2,7 +2,7 @@
 
 // --- Orthodox ---
 
-Socket::Socket() : _socket(NULL), _fd(-1) { memset(&(this->_hints), 0, sizeof this->_hints); }
+Socket::Socket() : _fd(-1) { memset(&(this->_hints), 0, sizeof this->_hints); }
 Socket::~Socket() { this->closeFd(); }
 
 // --- Exceptions ---

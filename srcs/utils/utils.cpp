@@ -203,6 +203,94 @@ void printConfig(GlobalConfig &config, int flag)
 		std::cout << RED << "\nParser Failed." << BLACK << std::endl;
 }
 
+/// @brief Builds the whole config as a string
+/// @param flag To use 1 when expected to pass, 0 when expected to fail
+std::string stringifyConfig(GlobalConfig &config, int flag)
+{
+	std::ostringstream oss;
+
+	oss << "=== Global Config ===" << std::endl;
+	oss << "  root: " << config.getRoot() << std::endl;
+	oss << "  autoindex: " << (config.getAutoindex() ? "on" : "off") << std::endl;
+	oss << "  max_body: " << config.getClientMaxBodySize() << std::endl;
+
+	const std::vector<std::string> &idx = config.getIndex();
+	oss << "  index:";
+	for (size_t i = 0; i < idx.size(); i++)
+		oss << " " << idx[i];
+	oss << std::endl;
+
+	const std::map<int, std::string> &ep = config.getErrorPages();
+	for (std::map<int, std::string>::const_iterator it = ep.begin(); it != ep.end(); ++it)
+		oss << "  error_page: " << it->first << " -> " << it->second << std::endl;
+
+	for (size_t s = 0; s < config.serverCount(); s++)
+	{
+		const ServerConfig &serv = config.getServers(s);
+		oss << "\n  [server " << s << "]" << std::endl;
+		oss << "    root: " << serv.getRoot() << std::endl;
+		oss << "    autoindex: " << (serv.getAutoindex() ? "on" : "off") << std::endl;
+		oss << "    max_body: " << serv.getClientMaxBodySize() << std::endl;
+		oss << "    cgi: " << serv.getCgiHandler().first << " " << serv.getCgiHandler().second << std::endl;
+
+		const std::vector<std::pair<std::string, std::string> > &listen = serv.getAllListen();
+		for (size_t i = 0; i < listen.size(); i++)
+			oss << "    listen: " << listen[i].first << ":" << listen[i].second << std::endl;
+
+		const std::vector<std::string> &sn = serv.getServerName();
+		oss << "    server_name:";
+		for (size_t i = 0; i < sn.size(); i++)
+			oss << " " << sn[i];
+		oss << std::endl;
+
+		const std::vector<std::string> &sidx = serv.getIndex();
+		oss << "    index:";
+		for (size_t i = 0; i < sidx.size(); i++)
+			oss << " " << sidx[i];
+		oss << std::endl;
+
+		const std::map<int, std::string> &sep = serv.getErrorPage();
+		for (std::map<int, std::string>::const_iterator it = sep.begin(); it != sep.end(); ++it)
+			oss << "    error_page: " << it->first << " -> " << it->second << std::endl;
+
+		for (size_t l = 0; l < serv.getLocations().size(); l++)
+		{
+			const LocationConfig &loc = serv.getLocations()[l];
+			oss << "      [location " << loc.getPath() << "]" << std::endl;
+			oss << "        root: " << loc.getRoot() << std::endl;
+			oss << "        autoindex: " << (loc.getAutoindex() ? "on" : "off") << std::endl;
+			oss << "        max_body: " << loc.getClientMaxBodySize() << std::endl;
+			oss << "        cgi: " << serv.getCgiHandler().first << " " << serv.getCgiHandler().second << std::endl;
+			oss << "        return: " << loc.getReturnCode() << " " << loc.getReturnUrl() << std::endl;
+
+			const std::vector<std::string> &lex = loc.getLimitExcept();
+			oss << "        limit_except:";
+			for (size_t i = 0; i < lex.size(); i++)
+				oss << " " << lex[i];
+			oss << std::endl;
+
+			const std::vector<std::string> &am = loc.getAllowMethods();
+			oss << "        allow_methods:";
+			for (size_t i = 0; i < am.size(); i++)
+				oss << " " << am[i];
+			oss << std::endl;
+
+			const std::vector<std::string> &lidx = loc.getIndex();
+			oss << "        index:";
+			for (size_t i = 0; i < lidx.size(); i++)
+				oss << " " << lidx[i];
+			oss << std::endl;
+		}
+	}
+
+	if (flag == 1)
+		oss << "\nParser passed." << std::endl;
+	if (flag == 0)
+		oss << "\nParser Failed." << std::endl;
+
+	return oss.str();
+}
+
 std::string getRecvErrorStr( int err )
 {
 	switch (err)
@@ -302,9 +390,4 @@ std::string getSendErrorStr( int err )
 		default:
 			return "Unknown send error";
 	}
-}
-
-void	logError( std::string errMsg, int flag )
-{
-
 }
