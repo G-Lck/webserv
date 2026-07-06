@@ -1,8 +1,7 @@
 #ifndef UTILS_HPP
 # define UTILS_HPP
 
-#include "Client.hpp"
-#include "WebServ.hpp"
+#include <string>
 
 class Client;
 class GlobalConfig;
