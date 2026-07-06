@@ -13,6 +13,9 @@ int	main( int ac, char **av )
 	}
 	ParseConfig		Parse(av[1]);
 	GlobalConfig	Config;
+	logError("info1", 2);
+	logError("info2", 2);
+	logError("warning", 3);
 
 	try
 	{
