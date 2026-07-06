@@ -202,3 +202,109 @@ void printConfig(GlobalConfig &config, int flag)
 	if (flag == 0)
 		std::cout << RED << "\nParser Failed." << BLACK << std::endl;
 }
+
+std::string getRecvErrorStr( int err )
+{
+	switch (err)
+	{
+		case EAGAIN:
+	#if EWOULDBLOCK != EAGAIN
+		case EWOULDBLOCK:
+	#endif
+			return "No data available, try again later";
+		case EBADF:
+			return "Invalid file descriptor";
+		case ECONNREFUSED:
+			return "Remote host refused the connection";
+		case EFAULT:
+			return "Buffer pointer outside valid memory";
+		case EINTR:
+			return "Interrupted by a signal, retry";
+		case EINVAL:
+			return "Invalid argument passed";
+		case ENOMEM:
+			return "Could not allocate memory";
+		case ENOTCONN:
+			return "Socket is not connected";
+		case ENOTSOCK:
+			return "File descriptor is not a socket";
+		default:
+			return "Unknown recv error";
+	}
+}
+
+std::string getEpollCtlErrorStr( int err )
+{
+	switch (err)
+	{
+		case EBADF:
+			return "epfd or fd is not a valid file descriptor";
+		case EEXIST:
+			return "fd is already registered with this epoll instance";
+		case EINVAL:
+			return "Invalid argument, operation, or event type for epoll_ctl";
+		case ELOOP:
+			return "Operation would create a circular epoll loop or excessive nesting";
+		case ENOENT:
+			return "fd is not registered with this epoll instance";
+		case ENOMEM:
+			return "Insufficient memory to handle the operation";
+		case ENOSPC:
+			return "max_user_watches limit reached, cannot register fd";
+		case EPERM:
+			return "fd does not support epoll (e.g. regular file or directory)";
+		default:
+			return "Unknown epoll_ctl error";
+	}
+}
+
+std::string getSendErrorStr( int err )
+{
+	switch (err)
+	{
+		case EACCES:
+			return "Write permission denied on destination socket";
+		case EAGAIN:
+	#if EWOULDBLOCK != EAGAIN
+		case EWOULDBLOCK:
+	#endif
+			return "Operation would block, try again later";
+		case EALREADY:
+			return "Another Fast Open is already in progress";
+		case EBADF:
+			return "Invalid file descriptor";
+		case ECONNRESET:
+			return "Connection reset by peer";
+		case EDESTADDRREQ:
+			return "Socket is not connection-mode and no peer address is set";
+		case EFAULT:
+			return "Invalid user space address specified";
+		case EINTR:
+			return "Interrupted by a signal before data was sent";
+		case EINVAL:
+			return "Invalid argument passed";
+		case EISCONN:
+			return "Socket already connected but a recipient was specified";
+		case EMSGSIZE:
+			return "Message too large to send atomically";
+		case ENOBUFS:
+			return "Output queue for the network interface was full";
+		case ENOMEM:
+			return "No memory available";
+		case ENOTCONN:
+			return "Socket is not connected";
+		case ENOTSOCK:
+			return "File descriptor is not a socket";
+		case EOPNOTSUPP:
+			return "Flags argument inappropriate for this socket type";
+		case EPIPE:
+			return "Local end has been shut down on this connection";
+		default:
+			return "Unknown send error";
+	}
+}
+
+void	logError( std::string errMsg, int flag )
+{
+
+}

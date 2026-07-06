@@ -89,7 +89,6 @@ void	Socket::socketListen(void)
     if (listen(this->_fd, BACKLOG) == -1)
 	{
 		this->closeFd();
-		this->socketFreeAddrInfo();
 		throw runtimeSocketException("Error:\nlisten() Fail");
 	}
 }
@@ -105,7 +104,6 @@ void Socket::socketSetNonBlock(void)
     if (fcntl(this->_fd, F_SETFL, O_NONBLOCK) == -1)
 	{
 		this->closeFd();
-		this->socketFreeAddrInfo();
 		throw runtimeSocketException("Error:\nfcntl() Fail");
 	}
 }

@@ -33,7 +33,7 @@ class	AServer
 		virtual void	initMultiplexer(void) = 0;
 		virtual void	addSocketsToMultiplexer(void) = 0;
 		virtual void	run(void) = 0;
-		virtual void	addClientToMultiplexer(int fd) = 0;
+		virtual bool	addClientToMultiplexer(int fd) = 0;
 		virtual void	removeFdFromMultiplexer(int fd) = 0;
 		virtual void	watchForRead(int fd) = 0;
 		virtual void	watchForWrite(int fd) = 0;

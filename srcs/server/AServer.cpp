@@ -100,12 +100,12 @@ bool	AServer::addNewClient(int curr_socket_fd)
 	{
 		if (errno == EAGAIN || errno == EWOULDBLOCK)
 			return (false);
-		std::cout << "accept() failed: " << strerror(errno) << std::endl;
+		std::cout << "accept() failed: " << strerror(errno) << std::endl; //~asdasdasd
 		return (false);
 	}
 	if (fcntl(fd_client, F_SETFL, O_NONBLOCK) == -1)
 	{
-		std::cout << "fcntl() failed: " << strerror(errno) << std::endl;
+		std::cout << "fcntl() failed: " << strerror(errno) << std::endl; //~asdasdasd
 		close(fd_client);
 		return (false);
 	}
@@ -113,41 +113,64 @@ bool	AServer::addNewClient(int curr_socket_fd)
 
 	Client *newClient = new Client(fd_client);
 	this->_clients.insert(std::make_pair(fd_client, newClient));
-	try
-	{
-		this->addClientToMultiplexer(fd_client);
-	}
-	catch (...)
+	if(!addClientToMultiplexer(fd_client))
 	{
 		this->_clients.erase(fd_client);
 		delete newClient;
 		this->_fd_to_route.erase(fd_client);
 		close(fd_client);
-		throw;
+		return (false);
 	}
 	return (true);
 }
 
-void	AServer::readRequest(int fd)
+/// @brief	This function willccall recv, and either handle the errors
+///			or on success, call appendToReadBuffer(), to add the read request from the buffer
+///			to the client matching with the fd passed as parameter.
+///			Finally it will call handleCompleteRequest() to handle the Requests.
+/// @param fd The client to match.
+void    AServer::readRequest(int fd)
 {
 	char buffer[4096];
 	int bytes_read = recv(fd, buffer, sizeof(buffer), 0);
 
-	if (bytes_read <= 0)
+	if (bytes_read == 0)
+	{
 		this->clientDisconnect(fd);
+	}
+	else if (bytes_read < 0)
+	{
+		if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
+			return ;
+		logError(getRecvErrorStr(errno), 1);
+		this->clientDisconnect(fd);
+	}
 	else
 	{
-		Client* c = _clients[fd];
+		std::map<int, Client*>::iterator it = _clients.find(fd);
+		if (it == _clients.end())
+		{
+			logError("readRequest: unknown fd", 1);
+			return ;
+		}
+		Client* c = it->second;
 		c->appendToReadBuffer(buffer, bytes_read);
 		while (c->parseBufferedRequest() == true)
 			this->handleCompleteRequest(fd);
 	}
 }
 
+/// @brief	We check on close for -1 in rare case where send() error code is EPIPE. Flag is set in send to MSG_NOSIGNAL to mute
+///			the signal sent by the kernell, and instead of killing the program we handle the errors.
+///			EPIPE will be sent in the case where the client disconnects mid-read (possible double close, we log error just in case). 
 void	AServer::clientDisconnect(int fd)
 {
 	this->removeFdFromMultiplexer(fd);
-	close(fd);
+	if (close(fd) == -1)
+	{
+		std::string err = "Client already disconnected: ";
+		logError(err.append(strerror(errno)), 1);
+	}
 	this->_fd_to_route.erase(fd);
 
 	std::map<int, Client*>::iterator it = this->_clients.find(fd);
@@ -176,24 +199,37 @@ void	AServer::handleCompleteRequest(int fd)
 	}
 }
 
-void	AServer::sendResponse(int fd)
+void    AServer::sendResponse(int fd)
 {
-	Client* c = _clients[fd];
-	int sent_bytes = send(fd, c->getWriteBuffer().c_str(), c->getWriteBuffer().length(), 0);
+	std::map<int, Client*>::iterator it = this->_clients.find(fd);
+	if (it == this->_clients.end())
+	{
+		logError("sendResponse: unknown fd", 1);
+		return ;
+	}
+	Client* c = it->second;
 
-	if (sent_bytes <= 0)
+	int sent_bytes = send(fd, c->getWriteBuffer().c_str(), c->getWriteBuffer().length(), MSG_NOSIGNAL);
+	if (sent_bytes == 0)
 	{
 		this->clientDisconnect(fd);
 		return ;
 	}
+	if (sent_bytes < 0)
+	{
+		logError(getSendErrorStr(errno), 1);
+		if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
+			return ;
+		this->clientDisconnect(fd);
+		return ;
+	}
+
 	c->eraseWriteBuffer(sent_bytes);
-	
 	if (!c->getWriteBuffer().empty())
 	{
 		this->watchForWrite(fd);
 		return;
 	}
-
 	if (!c->isResponseQueueEmpty())
 	{
 		c->appendToWriteBuffer(c->frontResponse());

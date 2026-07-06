@@ -24,7 +24,7 @@
 #include <cerrno>  		// Required to read the 'errno' variable
 #include <cstring> 		// Required for strerror()
 #include <fstream>
-#include <sstream>		// to us istringstream easier to split on spaces 
+#include <sstream>		// to us istringstream easier to split on spaces
 
 // --- POSIX Sockets & Network ---
 #include <sys/socket.h> // socket(), bind(), listen(), accept(), send(), recv(), setsockopt()
@@ -43,6 +43,7 @@
 #include <sys/stat.h>   // stat() (to check if an HTML file exists before serving)
 #include <dirent.h>     // opendir(), readdir(), closedir() (for autoindex)
 
+#include <signal.h>
 #include "utils.hpp"
 
 class GlobalConfig;

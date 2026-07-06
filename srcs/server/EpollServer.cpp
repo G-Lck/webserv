@@ -49,6 +49,8 @@ void	EpollServer::addSocketsToMultiplexer(void)
 
 void	EpollServer::run(void)
 {
+	if (this->_sockets.empty())
+		throw runtimeEpollServerException("Error\nNo sockets to serve.");
 	while (1)
 	{
 		int fd_count = epoll_wait(this->_epoll_fd, this->_active_events, MAX_EVENTS, -1);
@@ -78,34 +80,52 @@ void	EpollServer::run(void)
 	}
 }
 
-void	EpollServer::addClientToMultiplexer( int fd )
+/// @brief	This function will try to add an fd to the client_ev inside epoll
+///			if epoll_ctl call fails, an error will be logged.
+/// @param fd The fd to add
+/// @return True if it managed to add the client correctly
+bool	EpollServer::addClientToMultiplexer( int fd )
 {
 	struct epoll_event client_ev;
 	client_ev.events = EPOLLIN;
 	client_ev.data.fd = fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, fd, &client_ev) == -1)
-		throw runtimeEpollServerException("Error\nepoll_ctl()");
+	{
+		logError(getEpollCtlErrorStr(errno), 1);
+		return false;
+	}
+	return true;
 }
 
+/// @brief	This function will try to remove an fd from epoll, if the fd
+///			passed is not found, then an error will log. Execution continues.
+/// @param fd The fd to remove
 void	EpollServer::removeFdFromMultiplexer( int fd )
 {
-	epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
+	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, fd, NULL) == -1)
+		logError(getEpollCtlErrorStr(errno), 1);
 }
 
+/// @brief	Function to change to Read mode that fd inside epoll list of fd
+///			Errors will be logged if epoll_ctl fails and we continue execution.
 void	EpollServer::watchForRead( int fd )
 {
 	struct epoll_event mod_ev;
 	mod_ev.events = EPOLLIN;
 	mod_ev.data.fd = fd;
-	epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &mod_ev);
+	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &mod_ev) == -1)
+		logError(getEpollCtlErrorStr(errno), 1);
 }
 
+/// @brief	Function to change to Write mode that fd inside epoll list of fd
+///			Errors will be logged if epoll_ctl fails and we continue execution.
 void	EpollServer::watchForWrite( int fd )
 {
 	struct epoll_event mod_ev;
 	mod_ev.events = EPOLLOUT;
 	mod_ev.data.fd = fd;
-	epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &mod_ev);
+	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &mod_ev) == -1)
+		logError(getEpollCtlErrorStr(errno), 1);
 }
 
 void	EpollServer::closeEpoll(void)
@@ -117,7 +137,7 @@ void	EpollServer::closeEpoll(void)
 
 #else
 
-void	EpollServer::initMultiplexer(void)
+bool	EpollServer::initMultiplexer(void)
 {
 	throw runtimeEpollServerException("Epoll is not available on this platform.");
 }
