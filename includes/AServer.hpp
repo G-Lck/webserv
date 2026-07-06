@@ -10,10 +10,10 @@
 class	AServer
 {
 	protected:
-		std::map<int, Socket*>		_sockets;
-		std::map<int, Client*>		_clients;
-		t_virtualServer				_virtualServers;
-		t_fdRoute					_fd_to_route;
+		std::map<int, Socket*>				_sockets;
+		std::map<int, Client*>				_clients;
+		t_virtualServer						_virtualServers;
+		t_fdRoute							_fd_to_route;
 		
 		AServer(AServer const &other );
 		AServer &operator=( AServer const &other );

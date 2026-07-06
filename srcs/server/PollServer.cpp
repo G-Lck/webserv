@@ -75,7 +75,7 @@ void	PollServer::run(void)
 			if (this->_clients.find(current_fd) == this->_clients.end())
 				continue;
 
-			if (events & (POLLERR | POLLHUP | POLLNVAL))
+			if (events & (POLLERR | POLLNVAL))
 			{
 				this->clientDisconnect(current_fd);
 				continue;
@@ -86,6 +86,15 @@ void	PollServer::run(void)
 				continue;
 			if (events & POLLOUT)
 				this->sendResponse(current_fd);
+			if (this->_clients.find(current_fd) == this->_clients.end())
+				continue;
+
+			if (events & POLLHUP)
+			{
+				Client *c = this->_clients[current_fd];
+				if (c->getWriteBuffer().empty() && c->isResponseQueueEmpty())
+					this->clientDisconnect(current_fd);
+			}
 		}
 	}
 }

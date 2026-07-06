@@ -2,7 +2,7 @@
 
 bool request_is_complete(Client* client)
 {
-    if (client->getReadBuffer().find("\r\n\r\n") != std::string::npos)
+    if (client->getReadBuffer().find("aaa") != std::string::npos)
         return true;
     return false;
 }
@@ -14,19 +14,12 @@ std::string extract_request(Client* client)
 
 std::string process_and_build_response(Client* client)
 {
-    std::string single_request = client->getWriteBuffer();
-    std::cout << "\n--- NEW REQUEST RECEIVED ---\n" << single_request << "----------------------------\n" << std::endl;
-
-    std::string dummy_html = "<html><body><h1>Hello from Client Object!</h1></body></html>";
-    std::string dummy_response = "HTTP/1.1 200 OK\r\n"
-                                 "Content-Type: text/html\r\n"
-                                 "Content-Length: 58\r\n"
-                                 "\r\n" + dummy_html;
-                                 
-    return dummy_response;
+	client->getRequest().printRequest();
+	return ("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 2\r\nConnection: keep-alive\r\n\r\nOK");
 }                     
 
 void erase_request_from_buffer(Client* client)
 {
-    client->clearReadBuffer();
+    int consumed = client->getRequest().getConsumedBytes();
+    client->eraseFromReadBuffer(consumed);
 }

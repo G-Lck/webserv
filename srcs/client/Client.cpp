@@ -20,6 +20,11 @@ const std::string&	Client::getWriteBuffer() const
 	return (this->_write_buffer);
 }
 
+const HttpRequest&	Client::getRequest()	const
+{
+	return (this->_request);
+}
+
 // ------- Member variable manipulation --------
 
 void	Client::appendToReadBuffer(const char* data, size_t len)
@@ -42,7 +47,45 @@ void	Client::clearReadBuffer()
 	this->_read_buffer.clear();
 }
 
+void	Client::eraseFromReadBuffer(size_t n)
+{
+	if (n >= this->_read_buffer.size())
+		this->_read_buffer.clear();
+	else
+		this->_read_buffer.erase(0, n);
+}
+
 void	Client::clearWriteBuffer()
 {
 	this->_write_buffer.clear();
+}
+
+bool Client::parseBufferedRequest()
+{
+	return this->_request.parse(this->_read_buffer);
+}
+
+void Client::resetCurrentRequest()
+{
+	this->_request = HttpRequest();
+}
+
+void	Client::addResponseQueue(const std::string& response)
+{
+	this->_response_queue.push_back(response);
+}
+
+bool	Client::isResponseQueueEmpty()	const
+{
+	return(this->_response_queue.empty());
+}
+
+const std::string&	Client::frontResponse() const
+{
+	return(this->_response_queue.front());
+}
+
+void	Client::popFrontResponse()
+{
+	this->_response_queue.pop_front();
 }

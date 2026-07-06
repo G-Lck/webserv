@@ -18,11 +18,13 @@
 #include <cstring>      // std::memset(), std::strlen()
 #include <utility>		// std::pair
 #include <map>			// std::map
+#include <deque>		// std::deque
 #include <stdexcept>	// exceptions
 #include <algorithm>
 #include <cerrno>  		// Required to read the 'errno' variable
 #include <cstring> 		// Required for strerror()
 #include <fstream>
+#include <sstream>		// to us istringstream easier to split on spaces 
 
 // --- POSIX Sockets & Network ---
 #include <sys/socket.h> // socket(), bind(), listen(), accept(), send(), recv(), setsockopt()

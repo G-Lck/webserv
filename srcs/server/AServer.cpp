@@ -18,7 +18,7 @@ AServer::runtimeAServerException::runtimeAServerException(const char* message)
 // --------------- Set up Config ---------------
 
 /// @brief Initializes physical sockets and sets up the virtual host routing maps.
-void	AServer::configAServer( GlobalConfig &config )
+void	AServer::configAServer(GlobalConfig &config)
 {
 	t_port_host	 used_ports;
 	for (int i = 0; i < (int)config.serverCount(); i++)
@@ -43,7 +43,7 @@ void	AServer::configAServer( GlobalConfig &config )
 }
 
 /// @brief Add a single Socket to the server list.
-void	AServer::addSocket( Socket *S )
+void	AServer::addSocket(Socket *S)
 {
 	this->_sockets.insert(std::make_pair(S->getFd(), S));
 }
@@ -85,12 +85,12 @@ void	AServer::initAServer(void)
 
 // --------------- Handle Cases ---------------
 
-bool	AServer::fdMatch( int curr ) const
+bool	AServer::fdMatch(int curr) const
 {
 	return (this->_sockets.find(curr) != this->_sockets.end());
 }
 
-bool	AServer::addNewClient( int curr_socket_fd )
+bool	AServer::addNewClient(int curr_socket_fd)
 {
 	struct sockaddr_in  addr_client;
 	socklen_t           addr_size = sizeof(addr_client);
@@ -128,7 +128,7 @@ bool	AServer::addNewClient( int curr_socket_fd )
 	return (true);
 }
 
-void	AServer::readRequest( int fd )
+void	AServer::readRequest(int fd)
 {
 	char buffer[4096];
 	int bytes_read = recv(fd, buffer, sizeof(buffer), 0);
@@ -139,12 +139,12 @@ void	AServer::readRequest( int fd )
 	{
 		Client* c = _clients[fd];
 		c->appendToReadBuffer(buffer, bytes_read);
-		while (request_is_complete(c))
+		while (c->parseBufferedRequest() == true)
 			this->handleCompleteRequest(fd);
 	}
 }
 
-void	AServer::clientDisconnect( int fd )
+void	AServer::clientDisconnect(int fd)
 {
 	this->removeFdFromMultiplexer(fd);
 	close(fd);
@@ -158,20 +158,25 @@ void	AServer::clientDisconnect( int fd )
 	}
 }
 
-void	AServer::handleCompleteRequest( int fd )
+void	AServer::handleCompleteRequest(int fd)
 {
 	Client* c = _clients[fd];
 	extract_request(c);
 	std::string single_response = process_and_build_response(c);
 
-	c->appendToWriteBuffer(single_response);
+	c->addResponseQueue(single_response);
 	erase_request_from_buffer(c);
+	c->resetCurrentRequest();
 
-	if (!c->getWriteBuffer().empty())
+	if (c->getWriteBuffer().empty() && !c->isResponseQueueEmpty())
+	{
+		c->appendToWriteBuffer(c->frontResponse());
+		c->popFrontResponse();
 		this->watchForWrite(fd);
+	}
 }
 
-void	AServer::sendResponse( int fd )
+void	AServer::sendResponse(int fd)
 {
 	Client* c = _clients[fd];
 	int sent_bytes = send(fd, c->getWriteBuffer().c_str(), c->getWriteBuffer().length(), 0);
@@ -182,6 +187,21 @@ void	AServer::sendResponse( int fd )
 		return ;
 	}
 	c->eraseWriteBuffer(sent_bytes);
-	if (c->getWriteBuffer().empty())
+	
+	if (!c->getWriteBuffer().empty())
+	{
+		this->watchForWrite(fd);
+		return;
+	}
+
+	if (!c->isResponseQueueEmpty())
+	{
+		c->appendToWriteBuffer(c->frontResponse());
+		c->popFrontResponse();
+		this->watchForWrite(fd);
+	}
+	else
+	{
 		this->watchForRead(fd);
+	}
 }
