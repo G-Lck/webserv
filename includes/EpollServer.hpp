@@ -20,7 +20,7 @@ class	EpollServer: public AServer
 
 		//+ --- Internal functionality ---
 		void	closeEpoll(void);
-		void	addClientToMultiplexer( int fd );
+		bool	addClientToMultiplexer( int fd );
 		void	removeFdFromMultiplexer( int fd );
 		void	watchForRead( int fd );
 		void	watchForWrite( int fd );

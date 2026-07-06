@@ -38,11 +38,10 @@ void	PollServer::addSocketsToMultiplexer(void)
 
 void	PollServer::run(void)
 {
+	if (this->_pollfds.empty())
+		throw runtimePollServerException("Error\nNo file descriptor to poll.");
 	while (1)
 	{
-		if (this->_pollfds.empty())
-			throw runtimePollServerException("Error\nNo file descriptor to poll.");
-
 		int ready_count = poll(&this->_pollfds[0], this->_pollfds.size(), -1);
 		if (ready_count == -1)
 		{
@@ -99,7 +98,7 @@ void	PollServer::run(void)
 	}
 }
 
-void	PollServer::addClientToMultiplexer( int fd )
+bool	PollServer::addClientToMultiplexer( int fd )
 {
 	struct pollfd pfd;
 	pfd.fd = fd;
@@ -107,6 +106,7 @@ void	PollServer::addClientToMultiplexer( int fd )
 	pfd.revents = 0;
 	this->_fd_to_poll_index[fd] = this->_pollfds.size();
 	this->_pollfds.push_back(pfd);
+	return true;
 }
 
 void	PollServer::removeFdFromMultiplexer( int fd )

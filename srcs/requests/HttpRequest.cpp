@@ -78,7 +78,7 @@ bool HttpRequest::parseBody(const std::string& body_raw)
 {
 	size_t	body_len = atoi(_headers["Content-Length"].c_str());
 	
-	if (body_len > MAX_BODY_SIZE) // should be something form config file
+	if (body_len > MAX_BODY) // should be something form config file
 		throw HttpException(413, "Content Too Large");
 	
 	if (body_raw.size() < body_len)

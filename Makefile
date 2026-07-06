@@ -18,6 +18,7 @@ SRC = \
 		srcs/requests/HttpRequest.cpp \
 		srcs/parse/ParseConfig.cpp \
 		srcs/utils/utils.cpp \
+		srcs/utils/logs.cpp \
 		srcs/requests/HttpException.cpp
 
 OBJ = $(SRC:.cpp=.o)
@@ -37,5 +38,8 @@ fclean: clean
 		rm -f $(NAME)
 		rm -rf config/configs
 re: fclean all
+
+cleanlog:
+		rm ./log/*.log
 
 .PHONY: all clean fclean re

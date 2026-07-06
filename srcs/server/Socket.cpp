@@ -35,7 +35,10 @@ void	Socket::socketCall(void)
 {
 	this->_fd = socket(this->_socket->ai_family, this->_socket->ai_socktype, this->_socket->ai_protocol);
 	if (this->_fd == -1)
+	{
+		this->socketFreeAddrInfo();
 		throw runtimeSocketException("Error:\nsocket() Fail");
+	}	
 }
 
 /// @brief	Calls setsockopt, to avoid "Address already in use" error.
@@ -46,7 +49,11 @@ void	Socket::socketOpt(void)
 {
     int opt = 1;
     if (setsockopt(this->_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) 
+	{
+		this->closeFd();
+		this->socketFreeAddrInfo();
 		throw runtimeSocketException("Error:\nsetsockopt() Fail");
+	}
 }
 
 /// @brief	Calls bind() function for this socket.
@@ -55,13 +62,24 @@ void	Socket::socketOpt(void)
 void	Socket::socketBind(void) 
 {
 	if (bind(this->_fd, this->_socket->ai_addr, this->_socket->ai_addrlen) == -1)
+	{
+		this->closeFd();
+		this->socketFreeAddrInfo();
 		throw runtimeSocketException("Error:\nbind() Fail");
+	}
 }
 
 /// @brief	Calls freeaddrinfo() function for this socket.
 ///			Frees the linked list memory created by Socket::getAddrInfo()
 /// @note	Free after using bind(), not needed after.
-void	Socket::socketFreeAddrInfo(void) { freeaddrinfo(this->_socket); }
+void	Socket::socketFreeAddrInfo(void) 
+{
+	if(this->_socket != NULL)
+	{
+		freeaddrinfo(this->_socket);
+		this->_socket = NULL;
+	}
+}
 
 /// @brief	Calls listen() for this socket.
 //			listen() tells the OS to start accepting incoming connections. 
@@ -69,7 +87,10 @@ void	Socket::socketFreeAddrInfo(void) { freeaddrinfo(this->_socket); }
 void	Socket::socketListen(void) 
 {
     if (listen(this->_fd, BACKLOG) == -1)
+	{
+		this->closeFd();
 		throw runtimeSocketException("Error:\nlisten() Fail");
+	}
 }
 
 /// @brief	calls fcntl() function for this socket
@@ -81,7 +102,10 @@ void	Socket::socketListen(void)
 void Socket::socketSetNonBlock(void)
 {
     if (fcntl(this->_fd, F_SETFL, O_NONBLOCK) == -1)
-        throw runtimeSocketException("Error:\nfcntl() Fail");
+	{
+		this->closeFd();
+		throw runtimeSocketException("Error:\nfcntl() Fail");
+	}
 }
 
 /// @brief	Calls all the member functions for creating a socket in order.
