@@ -38,4 +38,7 @@ fclean: clean
 		rm -rf config/configs
 re: fclean all
 
+cleanlog:
+		rm ./log/*.log
+
 .PHONY: all clean fclean re
