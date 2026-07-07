@@ -18,6 +18,11 @@ AServer::runtimeAServerException::runtimeAServerException(const char* message)
 // --------------- Set up Config ---------------
 
 /// @brief Initializes physical sockets and sets up the virtual host routing maps.
+///			Taking data from th parsed Globalconfig, we intialize a loop to create
+///			the sockets:
+///				Double loop: one socket per "server"keyword per combo Host::Port found in the config file.
+///			Finally, we add to the virtual servers, a new t_virualServer type:
+///				This stores this data: Host:Port combo and a vector to all ServerConfig
 void	AServer::configAServer(GlobalConfig &config)
 {
 	t_port_host	 used_ports;
@@ -28,27 +33,32 @@ void	AServer::configAServer(GlobalConfig &config)
 
 		for (int j = 0; j < (int)ports.size(); j++)
 		{
+			// Try to find the current port to be added in the list of already used ports
 			t_port_host::iterator it = std::find(used_ports.begin(), used_ports.end(), ports[j]);
+			// If not found, add a new socket
 			if (it == used_ports.end())
 			{
 				Socket *newSocket = new Socket;
-				newSocket->makeSocket(ports[j].second, ports[j].first);
+				newSocket->makeSocket(ports[j].first, ports[j].second);
 				this->_fd_to_route[newSocket->getFd()] = ports[j];
 				used_ports.push_back(ports[j]);
 				this->addSocket(newSocket);
+				std::cout << ports[j].first << "::" << ports[j].second << std::endl;
 			}
 			this->_virtualServers[ports[j]].push_back(ServConf);
 		}
 	}
 }
 
-/// @brief Add a single Socket to the server list.
+/// @brief	Add a single Socket to the server list.
+///			We store in the map of (fd, Socket)
 void	AServer::addSocket(Socket *S)
 {
 	this->_sockets.insert(std::make_pair(S->getFd(), S));
 }
 
-/// @brief Close and delete all sockets.
+/// @brief	Close and delete all sockets.
+///			Iterate in the map of Sockets, closing the fd and freeing the memory
 void	AServer::closeSockets(void)
 {
 	std::map<int, Socket*>::iterator it = this->_sockets.begin();
@@ -61,13 +71,14 @@ void	AServer::closeSockets(void)
 	this->_sockets.clear();
 }
 
-/// @brief Close and delete all remaining clients.
+/// @brief	Close and delete all remaining clients.
+///			Iterate in the map of Cliets, closing the fd and freeing the memory
 void	AServer::closeClients(void)
 {
 	std::map<int, Client*>::iterator it = this->_clients.begin();
 	while (it != this->_clients.end())
 	{
-		close(it->first);
+		it->second->closeFd();
 		delete it->second;
 		++it;
 	}
@@ -85,11 +96,20 @@ void	AServer::initAServer(void)
 
 // --------------- Handle Cases ---------------
 
+/// @brief 	Simple helper function retuning true if the curr
+///			matches with an fd of the list of Sockets
+/// @param curr The fd to be found
 bool	AServer::fdMatch(int curr) const
 {
 	return (this->_sockets.find(curr) != this->_sockets.end());
 }
 
+/// @brief	This funtion will add a New client to epoll and to our _clients map
+///			It is executed when during the main loop, the fd inside the _active_events
+///			genetared by epoll_wait() matches a Socket id.
+///			The function will call accept() and with the fd given by this function
+///			Will create the new client and pair it as well with the Socket (host:port)
+/// @param curr_socket_fd The fd of the Socket to pair the new client with
 bool	AServer::addNewClient(int curr_socket_fd)
 {
 	struct sockaddr_in  addr_client;
@@ -103,16 +123,23 @@ bool	AServer::addNewClient(int curr_socket_fd)
 		std::cout << "accept() failed: " << strerror(errno) << std::endl; //~asdasdasd
 		return (false);
 	}
+	// Try to set to non-block
 	if (fcntl(fd_client, F_SETFL, O_NONBLOCK) == -1)
 	{
 		std::cout << "fcntl() failed: " << strerror(errno) << std::endl; //~asdasdasd
 		close(fd_client);
 		return (false);
 	}
+	// Pair the Socket with the Client, store that data to _fd_to_route (only for us as info)
 	this->_fd_to_route[fd_client] = this->_fd_to_route[curr_socket_fd];
 
+	// Create the new client with the fd given by accept()
 	Client *newClient = new Client(fd_client);
+
+	// Insert the client in the map fd:Client
 	this->_clients.insert(std::make_pair(fd_client, newClient));
+
+	// Try to add this fd to epoll
 	if(!addClientToMultiplexer(fd_client))
 	{
 		this->_clients.erase(fd_client);
@@ -124,35 +151,51 @@ bool	AServer::addNewClient(int curr_socket_fd)
 	return (true);
 }
 
-/// @brief	This function willccall recv, and either handle the errors
-///			or on success, call appendToReadBuffer(), to add the read request from the buffer
-///			to the client matching with the fd passed as parameter.
-///			Finally it will call handleCompleteRequest() to handle the Requests.
+/// @brief	This function will call recv, and either handle the errors
+///			or on success:
+///			Case 1: The request is not yet complete:
+///				 call appendToReadBuffer(), to add the read request from the buffer to the client body.
+///			Case 2: The request is compelted
+///				call handleCompleteRequest() to handle the request and switch to EPOLLOUT
 /// @param fd The client to match.
 void    AServer::readRequest(int fd)
 {
 	char buffer[4096];
+	//	recv(): receives messages from a socket
 	int bytes_read = recv(fd, buffer, sizeof(buffer), 0);
 
+	// man recv(): When a stream socket peer has performed an orderly shutdown, the
+    // return value will be 0 (the traditional "end-of-file" return)
 	if (bytes_read == 0)
 	{
 		this->clientDisconnect(fd);
 	}
 	else if (bytes_read < 0)
 	{
+		// man recv(): EAGAIN or EWOULDBLOCK: The socket is marked nonblocking and the receive operation
+		// would block, or a receive timeout had been set and the
+		// timeout expired before data was received.
+		// EINTR  The receive was interrupted by delivery of a signal before any data was available
 		if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
+		{
+			logError(getRecvErrorStr(errno), ERROR_WARNING); //~ HERE I THINK WE SHOULD LOG IN ANOTHER FILE, LIKE A WARNING AND NOT AN ERROR, THE CLIENT WONT BE DISCONECTED
 			return ;
-		logError(getRecvErrorStr(errno), 1);
+		}
+		// In any other case we log error
+		logError(getRecvErrorStr(errno), ERROR_INFO);
 		this->clientDisconnect(fd);
 	}
 	else
 	{
+		// Tries to match the fd, with the fd on the Clients map
 		std::map<int, Client*>::iterator it = _clients.find(fd);
+		// If not found we log error and continue
 		if (it == _clients.end())
 		{
-			logError("readRequest: unknown fd", 1);
+			logError("readRequest: unknown fd", ERROR_INFO);
 			return ;
 		}
+		// Otherwise we append to buffer until the request is finished
 		Client* c = it->second;
 		c->appendToReadBuffer(buffer, bytes_read);
 		while (c->parseBufferedRequest() == true)
@@ -169,7 +212,7 @@ void	AServer::clientDisconnect(int fd)
 	if (close(fd) == -1)
 	{
 		std::string err = "Client already disconnected: ";
-		logError(err.append(strerror(errno)), 1);
+		logError(err.append(strerror(errno)), ERROR_INFO);
 	}
 	this->_fd_to_route.erase(fd);
 
@@ -181,16 +224,29 @@ void	AServer::clientDisconnect(int fd)
 	}
 }
 
+/// @brief	As the function name describes, We handle a request was all succesfully read
+///			and stored in the body of the Client.
+/// @param fd Client
 void	AServer::handleCompleteRequest(int fd)
 {
-	Client* c = _clients[fd];
+	std::map<int, Client*>::iterator it = this->_clients.find(fd);
+	if (it == this->_clients.end())
+	{
+		logError("Request: unknown fd", ERROR_INFO);
+		return ;
+	}
+	Client* c = it->second;
+	// Build the HTTP response for this request.
 	extract_request(c);
 	std::string single_response = process_and_build_response(c);
 
+	// Clean up: erase the processed request from the read buffer, resets state for the next request.
 	c->addResponseQueue(single_response);
 	erase_request_from_buffer(c);
 	c->resetCurrentRequest();
 
+	// Check if needs to be queued before sending
+	// leaves the new response queued. sendResponse will pick it up later when the current one finishes.
 	if (c->getWriteBuffer().empty() && !c->isResponseQueueEmpty())
 	{
 		c->appendToWriteBuffer(c->frontResponse());
@@ -199,43 +255,56 @@ void	AServer::handleCompleteRequest(int fd)
 	}
 }
 
+/// @brief	Called when EPOLLOUT fires (socket ready to write):
+///			
+/// @param fd Client
 void    AServer::sendResponse(int fd)
 {
+	// Search for that client
 	std::map<int, Client*>::iterator it = this->_clients.find(fd);
 	if (it == this->_clients.end())
 	{
-		logError("sendResponse: unknown fd", 1);
+		logError("sendResponse: unknown fd", ERROR_INFO);
 		return ;
 	}
 	Client* c = it->second;
 
+	// Send the response!!
 	int sent_bytes = send(fd, c->getWriteBuffer().c_str(), c->getWriteBuffer().length(), MSG_NOSIGNAL);
-	if (sent_bytes == 0)
-	{
-		this->clientDisconnect(fd);
-		return ;
-	}
 	if (sent_bytes < 0)
 	{
-		logError(getSendErrorStr(errno), 1);
+		// man recv(): EAGAIN or EWOULDBLOCK: The socket is marked nonblocking and the receive operation
+		// would block, or a receive timeout had been set and the
+		// timeout expired before data was received.
+		// EINTR  The receive was interrupted by delivery of a signal before any data was available
 		if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
+		{
+			logError(getSendErrorStr(errno), ERROR_WARNING); //~ HERE I THINK WE SHOULD LOG IN ANOTHER FILE, LIKE A WARNING AND NOT AN ERROR, THE CLIENT WONT BE DISCONECTED
 			return ;
+		}
+		logError(getSendErrorStr(errno), ERROR_INFO);
 		this->clientDisconnect(fd);
 		return ;
 	}
 
+	// On success: erase what was sent from the buffer. 
 	c->eraseWriteBuffer(sent_bytes);
+
+	// If bytes remain, keep watching for write.
 	if (!c->getWriteBuffer().empty())
 	{
 		this->watchForWrite(fd);
 		return;
 	}
+	// If empty:
+	// Case 1: Load the next queued response and keep watching write
 	if (!c->isResponseQueueEmpty())
 	{
 		c->appendToWriteBuffer(c->frontResponse());
 		c->popFrontResponse();
 		this->watchForWrite(fd);
 	}
+	// Case 2: Switch back to watching read (waiting for the client's next request).
 	else
 	{
 		this->watchForRead(fd);

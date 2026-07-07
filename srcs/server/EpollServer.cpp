@@ -27,6 +27,7 @@ EpollServer::runtimeEpollServerException::runtimeEpollServerException(const char
 
 // --------------- Set up Epoll ---------------
 
+/// @brief Initialize epoll, store fd from epoll in the EpollServer member variable
 void	EpollServer::initMultiplexer(void)
 {
 	this->_epoll_fd = epoll_create(1);
@@ -34,6 +35,12 @@ void	EpollServer::initMultiplexer(void)
 		throw runtimeEpollServerException("Error\nEpoll init.");
 }
 
+/// @brief	Iterates though the map of fd:Sockets in the EpollServer
+///			Store in epoll the fd of that Socket, init the event to EPOLLIN
+///			And with epoll_ctl using EPOLL_CTL_ADD flag we add a 
+///			new entry inside epoll for that fd (or Socket):
+///			Inside the struct: We are linking &this->_event with that Socket
+/// @param  
 void	EpollServer::addSocketsToMultiplexer(void)
 {
 	std::map<int, Socket*>::iterator it = this->_sockets.begin();
@@ -47,6 +54,14 @@ void	EpollServer::addSocketsToMultiplexer(void)
 	}
 }
 
+/// @brief	54. Check if at least one socket connected
+///			57. Start main loop
+///			60. We call epoll_wait - waits for an event to happen in the first parameter fd
+///					* this->_epoll_fd: The epoll fd
+///					* this->_active_events: Here epoll_wait stores the struct epoll_event of the event happend for that fd
+///					* MAX_EVENTS: max number of events
+///					* -1: This is witing time, when set to -1 is no waiting time
+/// @param  
 void	EpollServer::run(void)
 {
 	if (this->_sockets.empty())
@@ -60,18 +75,26 @@ void	EpollServer::run(void)
 				continue;
 			throw runtimeEpollServerException((std::string("Error fatal:\n") + strerror(errno)).c_str());
 		}
+		// Here we are itearing on all the events to run the right case for each fd
 		for (int i = 0; i < fd_count; ++i)
 		{
 			int current_fd = this->_active_events[i].data.fd;
+			// Cases:
+			// current_fd matches a listening socket: a new client
+			// connection is waiting to be accepted
 			if (this->fdMatch(current_fd))
 			{
 				if (!this->addNewClient(current_fd))
 					continue;
 			}
+			// current_fd is an existing client, and it sent data (EPOLLIN):
+			// read the incoming request
 			else if (this->_active_events[i].events & EPOLLIN)
 			{
 				this->readRequest(current_fd);
 			}
+			// current_fd is an existing client, and it's ready to receive
+			// data (EPOLLOUT): send the pending response
 			else if (this->_active_events[i].events & EPOLLOUT)
 			{
 				this->sendResponse(current_fd);
@@ -91,7 +114,7 @@ bool	EpollServer::addClientToMultiplexer( int fd )
 	client_ev.data.fd = fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, fd, &client_ev) == -1)
 	{
-		logError(getEpollCtlErrorStr(errno), 1);
+		logError(getEpollCtlErrorStr(errno), ERROR_INFO);
 		return false;
 	}
 	return true;
@@ -103,7 +126,7 @@ bool	EpollServer::addClientToMultiplexer( int fd )
 void	EpollServer::removeFdFromMultiplexer( int fd )
 {
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, fd, NULL) == -1)
-		logError(getEpollCtlErrorStr(errno), 1);
+		logError(getEpollCtlErrorStr(errno), ERROR_INFO);
 }
 
 /// @brief	Function to change to Read mode that fd inside epoll list of fd
@@ -114,7 +137,7 @@ void	EpollServer::watchForRead( int fd )
 	mod_ev.events = EPOLLIN;
 	mod_ev.data.fd = fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &mod_ev) == -1)
-		logError(getEpollCtlErrorStr(errno), 1);
+		logError(getEpollCtlErrorStr(errno), ERROR_INFO);
 }
 
 /// @brief	Function to change to Write mode that fd inside epoll list of fd
@@ -125,7 +148,7 @@ void	EpollServer::watchForWrite( int fd )
 	mod_ev.events = EPOLLOUT;
 	mod_ev.data.fd = fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &mod_ev) == -1)
-		logError(getEpollCtlErrorStr(errno), 1);
+		logError(getEpollCtlErrorStr(errno), ERROR_INFO);
 }
 
 void	EpollServer::closeEpoll(void)

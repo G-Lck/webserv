@@ -17,7 +17,7 @@ Socket::runtimeSocketException::runtimeSocketException(const char* message) : st
 ///			SOCK_STREAM (Specifies that is a TCP stream socket) | 
 ///			AI_PASSIVE (Sets the ip of this pc for us) | 
 /// @throw	Throws runtimeSocketException() if getaddrinfo() fails
-void Socket::socketGetAddrInfo( std::string port, std::string host ) 
+void Socket::socketGetAddrInfo( std::string host, std::string port ) 
 {
 	memset(&(this->_hints), 0, sizeof this->_hints);
 	this->_hints.ai_family = AF_UNSPEC;
@@ -109,9 +109,9 @@ void Socket::socketSetNonBlock(void)
 }
 
 /// @brief	Calls all the member functions for creating a socket in order.
-void	Socket::makeSocket( std::string port, std::string host )
+void	Socket::makeSocket( std::string host, std::string port )
 {
-	this->socketGetAddrInfo(port, host);
+	this->socketGetAddrInfo(host, port);
 	this->socketCall();
 	this->socketOpt();
 	this->socketBind();

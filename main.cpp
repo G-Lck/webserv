@@ -59,8 +59,12 @@ int	main( int ac, char **av )
 }
 
 /*
-
-**5. Fatal errors inside run() loop (design decision, needs an answer)**
-- `epoll_wait` returning a non-`EINTR` error — is that print-and-exit, or controlled shutdown first?
-- Your destructor unwind already closes sockets/clients correctly via RAII, which is good — but confirm that's a deliberate design, not an accident. If it's deliberate: fine, just document it with a comment so it doesn't look accidental. If you want extra safety, you could log "shutting down due to fatal epoll error" before the throw so it's traceable in logs.
+ dont use waitpid for the gci case
+ use non block
+ add timeout in cgi
+ 
 */
+
+// Questions for Garance:
+// What h appens if the request never finishes with /n/r/n/r
+// Where do we check for thgat? I cannot find it

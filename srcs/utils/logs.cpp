@@ -1,10 +1,5 @@
 #include "../../includes/WebServ.hpp"
 
-#define ACCESS 1
-#define ERROR_INFO 2
-#define ERROR_WARNING 3
-
-
 void	logError( const std::string errMsg, int flag )
 {
 	if (flag == ACCESS)

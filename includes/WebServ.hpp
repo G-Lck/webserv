@@ -11,6 +11,11 @@
 
 #define MAX_BODY 104857600 // 10MB
 
+//* --- ERROR LOG DEFINES ---
+#define ACCESS 1
+#define ERROR_INFO 2
+#define ERROR_WARNING 3
+
 // --- C++ Standard Core ---
 #include <iostream>     // std::cout, std::cerr
 #include <string>       // std::string

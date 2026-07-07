@@ -17,7 +17,7 @@ class	Socket
 		Socket &operator=( Socket const &other );
 
 		//+ --- Main Functionality ---
-		void	socketGetAddrInfo( std::string port, std::string host );
+		void	socketGetAddrInfo( std::string host, std::string port );
 		void	socketCall(void);
 		void	socketOpt(void);
 		void	socketBind(void);
@@ -35,7 +35,7 @@ class	Socket
 		};
 
 		//+ --- Main executor ---
-		void	makeSocket( std::string port, std::string host );
+		void	makeSocket( std::string host, std::string port );
 
 		//+ --- Getters / Setters / Helpers ---
 		int		getFd(void);

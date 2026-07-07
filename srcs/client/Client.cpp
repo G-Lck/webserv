@@ -89,3 +89,6 @@ void	Client::popFrontResponse()
 {
 	this->_response_queue.pop_front();
 }
+
+/// @brief	Close the file descriptor attached to this Socket.
+void	Client::closeFd(void) { if (this->_fd != -1) { close(this->_fd); this->_fd = -1; } }

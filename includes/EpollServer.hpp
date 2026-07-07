@@ -10,7 +10,7 @@ class	EpollServer: public AServer
 {
 	private:
 		#ifdef __linux__
-		int						_epoll_fd;
+		int							_epoll_fd;
 		struct epoll_event			_event;
 		struct epoll_event			_active_events[MAX_EVENTS];
 		#endif

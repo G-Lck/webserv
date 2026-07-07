@@ -41,7 +41,7 @@ class Client
 	bool	isResponseQueueEmpty()	const;
 	const std::string&	frontResponse() const;
 	void	popFrontResponse();
-
+	void	closeFd(void);
 };
 
 #endif
