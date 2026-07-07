@@ -20,6 +20,10 @@ HttpRequest& HttpRequest::operator=(const HttpRequest& other) {
 
 HttpRequest::~HttpRequest() {}
 
+
+/// @brief parse the first line of the request, it should be a method (GET, POST, DELETE),
+/// a path (begining by a /) and a version (HTTP/1.0 or HTTP/1.1). They are stored in HttpRequest.
+/// @exception HttpException when rules are not respected, we throw
 void	HttpRequest::parseRequestLine(const std::string& line)
 {
 	std::istringstream	ss(line);
@@ -50,6 +54,9 @@ void	HttpRequest::parseRequestLine(const std::string& line)
 	this->_version = version;
 }
 
+/// @brief parse all other lines until \r\n\r\n, it should only be a something:something 
+/// separate by \r\n. Everything is store in httpRequest->_headers
+/// @exception HttpException when rules are not respected, we throw
 void	HttpRequest::parseHeaders(const std::string& raw)
 {
 	std::istringstream	ss(raw);
@@ -73,6 +80,10 @@ void	HttpRequest::parseHeaders(const std::string& raw)
 		throw HttpException(400, "Bad Request");
 }
 
+/// @brief when the body is not chunked we know the content length, we store this size 
+/// on body_row, and consumed_bytes is add by body_len in order to clear the buffer
+/// @exception HttpException when rules are not respected, we throw
+/// @return true when body_raw is bigger than content_length and false otherwise
 bool HttpRequest::parseBody(const std::string& body_raw)
 {
 	size_t	body_len = atoi(_headers["Content-Length"].c_str());
@@ -87,6 +98,9 @@ bool HttpRequest::parseBody(const std::string& body_raw)
 	return true;
 }
 
+/// @brief when the body is chunked we receive the len of the first chunk after each chunk, separated
+/// \r\n. the last size given is 0;
+/// @return if we have the last size 0, all the body is there and we return true, otherwise false.
 bool HttpRequest::parseChunkedBody(const std::string& raw) // we should check the max size
 {
     std::string result;
@@ -99,7 +113,7 @@ bool HttpRequest::parseChunkedBody(const std::string& raw) // we should check th
             return false;
 
         std::string size_str = raw.substr(pos, chunk_end - pos);
-        size_t chunk_size = strtol(size_str.c_str(), NULL, 16);
+        size_t chunk_size = strtol(size_str.c_str(), NULL, 16); // size is given in 16-base
 
         if (chunk_size == 0)
 		{
@@ -117,6 +131,9 @@ bool HttpRequest::parseChunkedBody(const std::string& raw) // we should check th
     return false;
 }
 
+///@brief orchestrate the parsing, and store the consumed_bytes to the HttpRequest in order
+/// to erase them later.
+/// @return true if we have a complete request with his body if applicable, false otherwise.
 bool HttpRequest::parse(const std::string& raw)
 {
 	std::cout << "http request parser begin" << std::endl;
@@ -159,6 +176,7 @@ void	HttpRequest::printRequest() const
 		std::cout << it->first << ": " << it->second << std::endl;
 	}
 	std::cout << "Body" << std::endl << _body << std::endl;
+	std::cout << "consumed bytes: " << this->_consumed_bytes << std::endl;
 
 
 }
