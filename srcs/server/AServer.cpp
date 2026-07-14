@@ -84,6 +84,40 @@ void	AServer::closeClients(void)
 	}
 	this->_clients.clear();
 }
+// --------------- Monitoring ---------------
+
+bool	AServer::clientTimeout( int fd )
+{
+	std::map<int, Client*>::iterator it = this->_clients.find(fd);
+	if (it == this->_clients.end())
+		return (false);
+	time_t	last_activity = it->second->getLastActivity();
+	time_t	now;
+	time(&now);
+
+	if (difftime(now, last_activity) > MAX_WAIT_TIME)
+		return (true);
+	return(false);
+}
+
+/// @brief Funtion to monitor client timeouts. If any timneout it will get disconected
+void	AServer::monitorClients()
+{
+	std::map<int, Client*>::iterator it = this->_clients.begin();
+	while (it != this->_clients.end())
+	{
+		std::map<int, Client*>::iterator next = it;
+		++next;
+		if (clientTimeout(it->first))
+		{
+			std::ostringstream oss;
+			oss << "Client timeout, disconnecting fd " << it->first;
+			writeLog(oss.str(), SERVER_EVENTS);
+			this->clientDisconnect(it->first);
+		}
+		it = next;
+	}
+}
 
 // --------------- Launching ---------------
 
@@ -136,6 +170,9 @@ bool	AServer::addNewClient(int curr_socket_fd)
 	// Create the new client with the fd given by accept()
 	Client *newClient = new Client(fd_client);
 
+	// Set the time for timeout
+	newClient->updateTime();
+
 	// Insert the client in the map fd:Client
 	this->_clients.insert(std::make_pair(fd_client, newClient));
 
@@ -178,11 +215,11 @@ void    AServer::readRequest(int fd)
 		// EINTR  The receive was interrupted by delivery of a signal before any data was available
 		if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
 		{
-			logError(getRecvErrorStr(errno), ERROR_WARNING); //~ HERE I THINK WE SHOULD LOG IN ANOTHER FILE, LIKE A WARNING AND NOT AN ERROR, THE CLIENT WONT BE DISCONECTED
+			writeLog(getRecvErrorStr(errno), ERROR_WARNING); //~ HERE I THINK WE SHOULD LOG IN ANOTHER FILE, LIKE A WARNING AND NOT AN ERROR, THE CLIENT WONT BE DISCONECTED
 			return ;
 		}
 		// In any other case we log error
-		logError(getRecvErrorStr(errno), ERROR_INFO);
+		writeLog(getRecvErrorStr(errno), ERROR_INFO);
 		this->clientDisconnect(fd);
 	}
 	else
@@ -192,14 +229,21 @@ void    AServer::readRequest(int fd)
 		// If not found we log error and continue
 		if (it == _clients.end())
 		{
-			logError("readRequest: unknown fd", ERROR_INFO);
+			writeLog("readRequest: unknown fd", ERROR_INFO);
 			return ;
 		}
 		// Otherwise we append to buffer until the request is finished
 		Client* c = it->second;
 		c->appendToReadBuffer(buffer, bytes_read);
 		while (c->parseBufferedRequest() == true)
+		{
 			this->handleCompleteRequest(fd);
+			if (!c->getKeepAlive())
+			{
+				this->clientDisconnect(fd);
+				break;
+			}
+		}
 	}
 }
 
@@ -212,7 +256,7 @@ void	AServer::clientDisconnect(int fd)
 	if (close(fd) == -1)
 	{
 		std::string err = "Client already disconnected: ";
-		logError(err.append(strerror(errno)), ERROR_INFO);
+		writeLog(err.append(strerror(errno)), ERROR_INFO);
 	}
 	this->_fd_to_route.erase(fd);
 
@@ -232,22 +276,22 @@ void	AServer::handleCompleteRequest(int fd)
 	std::map<int, Client*>::iterator it = this->_clients.find(fd);
 	if (it == this->_clients.end())
 	{
-		logError("Request: unknown fd", ERROR_INFO);
+		writeLog("Request: unknown fd", ERROR_INFO);
 		return ;
 	}
 	Client* c = it->second;
 	// Build the HTTP response for this request.
-	extract_request(c);
 	std::string single_response = process_and_build_response(c);
 
 	// Clean up: erase the processed request from the read buffer, resets state for the next request.
 	c->addResponseQueue(single_response);
 	erase_request_from_buffer(c);
+	c->wantsKeepAlive(); // Set the _keep_alive member variable before reseting the request
 	c->resetCurrentRequest();
 
 	// Check if needs to be queued before sending
 	// leaves the new response queued. sendResponse will pick it up later when the current one finishes.
-	if (c->getWriteBuffer().empty() && !c->isResponseQueueEmpty())
+	if (c->isWriteBufferEmpty() && !c->isResponseQueueEmpty())
 	{
 		c->appendToWriteBuffer(c->frontResponse());
 		c->popFrontResponse();
@@ -264,13 +308,13 @@ void    AServer::sendResponse(int fd)
 	std::map<int, Client*>::iterator it = this->_clients.find(fd);
 	if (it == this->_clients.end())
 	{
-		logError("sendResponse: unknown fd", ERROR_INFO);
+		writeLog("sendResponse: unknown fd", ERROR_INFO);
 		return ;
 	}
 	Client* c = it->second;
 
 	// Send the response!!
-	int sent_bytes = send(fd, c->getWriteBuffer().c_str(), c->getWriteBuffer().length(), MSG_NOSIGNAL);
+	int sent_bytes = send(fd, c->getWriteData(), c->getWriteRemaining(), MSG_NOSIGNAL);
 	if (sent_bytes < 0)
 	{
 		// man recv(): EAGAIN or EWOULDBLOCK: The socket is marked nonblocking and the receive operation
@@ -279,10 +323,10 @@ void    AServer::sendResponse(int fd)
 		// EINTR  The receive was interrupted by delivery of a signal before any data was available
 		if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
 		{
-			logError(getSendErrorStr(errno), ERROR_WARNING); //~ HERE I THINK WE SHOULD LOG IN ANOTHER FILE, LIKE A WARNING AND NOT AN ERROR, THE CLIENT WONT BE DISCONECTED
+			writeLog(getSendErrorStr(errno), ERROR_WARNING); //~ HERE I THINK WE SHOULD LOG IN ANOTHER FILE, LIKE A WARNING AND NOT AN ERROR, THE CLIENT WONT BE DISCONECTED
 			return ;
 		}
-		logError(getSendErrorStr(errno), ERROR_INFO);
+		writeLog(getSendErrorStr(errno), ERROR_INFO);
 		this->clientDisconnect(fd);
 		return ;
 	}
@@ -291,7 +335,7 @@ void    AServer::sendResponse(int fd)
 	c->eraseWriteBuffer(sent_bytes);
 
 	// If bytes remain, keep watching for write.
-	if (!c->getWriteBuffer().empty())
+	if (!c->isWriteBufferEmpty())
 	{
 		this->watchForWrite(fd);
 		return;
@@ -307,6 +351,9 @@ void    AServer::sendResponse(int fd)
 	// Case 2: Switch back to watching read (waiting for the client's next request).
 	else
 	{
-		this->watchForRead(fd);
+		if (c->getKeepAlive())
+			this->watchForRead(fd);
+		else
+			this->clientDisconnect(fd);
 	}
 }

@@ -159,9 +159,14 @@ bool HttpRequest::parse(const std::string& raw)
 	return true;
 }
 
-int	HttpRequest::getConsumedBytes() const
+size_t	HttpRequest::getConsumedBytes() const
 {
 	return this->_consumed_bytes;
+}
+
+std::map<std::string, std::string>	HttpRequest::getHeaders() const
+{
+	return this->_headers;
 }
 
 void	HttpRequest::printRequest() const
@@ -177,6 +182,4 @@ void	HttpRequest::printRequest() const
 	}
 	std::cout << "Body" << std::endl << _body << std::endl;
 	std::cout << "consumed bytes: " << this->_consumed_bytes << std::endl;
-
-
 }

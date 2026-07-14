@@ -32,6 +32,9 @@ class	AServer
 		void	handleCompleteRequest(int fd);
 		void	readRequest(int fd);
 		void	sendResponse(int fd);
+		bool	clientTimeout( int fd );
+		void	monitorClients();
+
 		virtual void	initMultiplexer(void) = 0;
 		virtual void	addSocketsToMultiplexer(void) = 0;
 		virtual void	run(void) = 0;

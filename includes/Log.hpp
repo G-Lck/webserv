@@ -3,6 +3,6 @@
 
 #include "WebServ.hpp"
 
-void	logError( const std::string errMsg, int flag );
+void	writeLog( const std::string msg, int flag );
 
 #endif

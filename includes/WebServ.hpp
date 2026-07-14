@@ -11,10 +11,21 @@
 
 #define MAX_BODY 104857600 // 10MB
 
+#define DEFAULT_HOST "0.0.0.0"
+#define DEFAULT_PORT "8080"
+#define MAX_WAIT_TIME 60			// Time in seconds, how long we wait until closing a Client
+#define SERVER_REFRESH_TIME 500		// Time in miliseconds, basically how often epoll_wait() is called in the main loop
+
 //* --- ERROR LOG DEFINES ---
-#define ACCESS 1
-#define ERROR_INFO 2
-#define ERROR_WARNING 3
+
+enum LogFiles
+{
+	INFO,
+	ACCESS,
+	SERVER_EVENTS,
+	ERROR_INFO,
+	ERROR_WARNING,
+};
 
 // --- C++ Standard Core ---
 #include <iostream>     // std::cout, std::cerr

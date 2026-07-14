@@ -6,15 +6,12 @@
 #include "Log.hpp"
 #include "GlobalConfig.hpp"
 
-bool			request_is_complete( Client *client );
-
-std::string		extract_request( Client *client );
 
 std::string		process_and_build_response( Client *client );                     
 
 void		erase_request_from_buffer( Client *client );
 
-void		logError( std::string errMsg, int flag );
+void		writeLog( std::string msg, int flag );
    
 void			erase_request_from_buffer( Client *client );
 

@@ -19,15 +19,12 @@ int	main( int ac, char **av )
 	// signal(SIGPIPE, SIG_IGN);
 	ParseConfig		Parse(av[1]);
 	GlobalConfig	Config;
-	logError("info1", 2);
-	logError("info2", 2);
-	logError("warning", 3);
 
 	try
 	{
 		Parse.parse(Config);
 		printConfig(Config, 1);
-		logError(stringifyConfig(Config, 1), 1);
+		writeLog(stringifyConfig(Config, 1), 1);
 		//+ CHECK PARSE FUNCTION MISSING:
 		//	- check if root is not empty
 		//	- check at least one server

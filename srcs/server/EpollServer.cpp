@@ -68,7 +68,8 @@ void	EpollServer::run(void)
 		throw runtimeEpollServerException("Error\nNo sockets to serve.");
 	while (1)
 	{
-		int fd_count = epoll_wait(this->_epoll_fd, this->_active_events, MAX_EVENTS, -1);
+		monitorClients();
+		int fd_count = epoll_wait(this->_epoll_fd, this->_active_events, MAX_EVENTS, 500);
 		if (fd_count == -1)
 		{
 			if (errno == EINTR)
@@ -91,6 +92,7 @@ void	EpollServer::run(void)
 			// read the incoming request
 			else if (this->_active_events[i].events & EPOLLIN)
 			{
+				
 				this->readRequest(current_fd);
 			}
 			// current_fd is an existing client, and it's ready to receive
@@ -114,7 +116,7 @@ bool	EpollServer::addClientToMultiplexer( int fd )
 	client_ev.data.fd = fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, fd, &client_ev) == -1)
 	{
-		logError(getEpollCtlErrorStr(errno), ERROR_INFO);
+		writeLog(getEpollCtlErrorStr(errno), ERROR_INFO);
 		return false;
 	}
 	return true;
@@ -126,7 +128,7 @@ bool	EpollServer::addClientToMultiplexer( int fd )
 void	EpollServer::removeFdFromMultiplexer( int fd )
 {
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, fd, NULL) == -1)
-		logError(getEpollCtlErrorStr(errno), ERROR_INFO);
+		writeLog(getEpollCtlErrorStr(errno), ERROR_INFO);
 }
 
 /// @brief	Function to change to Read mode that fd inside epoll list of fd
@@ -137,7 +139,7 @@ void	EpollServer::watchForRead( int fd )
 	mod_ev.events = EPOLLIN;
 	mod_ev.data.fd = fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &mod_ev) == -1)
-		logError(getEpollCtlErrorStr(errno), ERROR_INFO);
+		writeLog(getEpollCtlErrorStr(errno), ERROR_INFO);
 }
 
 /// @brief	Function to change to Write mode that fd inside epoll list of fd
@@ -148,7 +150,7 @@ void	EpollServer::watchForWrite( int fd )
 	mod_ev.events = EPOLLOUT;
 	mod_ev.data.fd = fd;
 	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &mod_ev) == -1)
-		logError(getEpollCtlErrorStr(errno), ERROR_INFO);
+		writeLog(getEpollCtlErrorStr(errno), ERROR_INFO);
 }
 
 void	EpollServer::closeEpoll(void)

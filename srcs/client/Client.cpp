@@ -2,9 +2,9 @@
 
 // ------- Orthodox --------
 
-Client::Client() : _fd(-1) { std::cout << "Client default constructor called" << std::endl; }
+Client::Client() : _fd(-1), _write_offset(0), _last_activity(0) { std::cout << "Client default constructor called" << std::endl; }
 
-Client::Client( int fd ) : _fd(fd) { };
+Client::Client( int fd ) : _fd(fd), _write_offset(0), _last_activity(0) { };
 
 Client::~Client() { }
 
@@ -15,9 +15,10 @@ const std::string&	Client::getReadBuffer()	const
 	return (this->_read_buffer);
 }
 
-const std::string&	Client::getWriteBuffer() const
+
+size_t Client::getWriteRemaining() const
 {
-	return (this->_write_buffer);
+	return _write_buffer.size() - _write_offset;
 }
 
 const HttpRequest&	Client::getRequest()	const
@@ -32,14 +33,29 @@ void	Client::appendToReadBuffer(const char* data, size_t len)
 	this->_read_buffer.append(data, len);
 }
 
-void	Client::appendToWriteBuffer(const std::string& data)
+void Client::appendToWriteBuffer(const std::string& data)
 {
-	this->_write_buffer.append(data);
+    this->_write_buffer.append(data);
 }
 
-void	Client::eraseWriteBuffer(size_t n)
+void Client::eraseWriteBuffer(size_t n)
 {
-	this->_write_buffer.erase(0, n);
+    _write_offset += n;
+    if (_write_offset >= _write_buffer.size())
+    {
+        _write_buffer.clear();
+        _write_offset = 0;
+    }
+}
+
+bool Client::isWriteBufferEmpty() const
+{
+    return getWriteRemaining() == 0;
+}
+
+const char* Client::getWriteData() const
+{
+    return _write_buffer.data() + _write_offset;
 }
 
 void	Client::clearReadBuffer()
@@ -55,9 +71,10 @@ void	Client::eraseFromReadBuffer(size_t n)
 		this->_read_buffer.erase(0, n);
 }
 
-void	Client::clearWriteBuffer()
+void Client::clearWriteBuffer()
 {
-	this->_write_buffer.clear();
+    _write_buffer.clear();
+    _write_offset = 0;
 }
 
 bool Client::parseBufferedRequest()
@@ -88,6 +105,42 @@ const std::string&	Client::frontResponse() const
 void	Client::popFrontResponse()
 {
 	this->_response_queue.pop_front();
+}
+
+bool Client::getKeepAlive() const
+{
+	return this->_keep_alive;
+}
+
+void Client::setKeepAlive( bool alive )
+{
+	this->_keep_alive = alive;
+}
+
+void Client::wantsKeepAlive()
+{
+	std::map<std::string, std::string>					headers = this->_request.getHeaders();
+	std::map<std::string, std::string>::const_iterator	it = headers.find("Connection");
+	
+	if (it != headers.end())
+	{
+		if (it->second == "close")
+			this->_keep_alive = false;
+		else if (it->second == "keep-alive")
+			this->_keep_alive = true;
+	}
+	else
+		this->_keep_alive = true;
+}
+
+void Client::updateTime()
+{
+	time(&(this->_last_activity));
+}
+
+time_t Client::getLastActivity() const
+{
+	return (this->_last_activity);
 }
 
 /// @brief	Close the file descriptor attached to this Socket.

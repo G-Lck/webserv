@@ -95,6 +95,8 @@ void ParseConfig::parse(GlobalConfig &config)
 
 	it = this->_tokens.begin();
 	parseConfig(it, config);
+	if (config.serverCount() == 0)
+		throw ParseErrException("Error: no servers in config file");
 }
 
 void ParseConfig::parseConfig(std::vector<std::string>::iterator &it, GlobalConfig &config)
@@ -126,6 +128,10 @@ void ParseConfig::parseServer(std::vector<std::string>::iterator &it, GlobalConf
 		throw ParseErrException("Error\nUnexpected end of file, missing '}'");
     if (*it == "}")
     {
+		if (servConfig.getAllListen().empty())
+			servConfig.addListen(DEFAULT_HOST, DEFAULT_PORT);
+		if (servConfig.getLocations().empty())
+			throw ParseErrException("Error: Server with no locations");
 		it++;
 		return ;
     }
@@ -232,8 +238,8 @@ void ParseConfig::parseGlobalToken(std::vector<std::string>::iterator &it, Globa
 			parseMaxBody(it, config);
 			break;
 		default:
-			std::string errMsg = "Error\nInvalid token in global context: " + *it;
-			throw ParseErrException(errMsg.c_str());
+			std::string msg = "Error\nInvalid token in global context: " + *it;
+			throw ParseErrException(msg.c_str());
 			break;
 	}
 }
@@ -269,8 +275,8 @@ void ParseConfig::parseServerToken(std::vector<std::string>::iterator &it, Serve
 			parseCGI(it, config);
 			break;
 		default:
-			std::string errMsg = "Error\nInvalid token in server context: " + *it;
-			throw ParseErrException(errMsg.c_str());
+			std::string msg = "Error\nInvalid token in server context: " + *it;
+			throw ParseErrException(msg.c_str());
 			break;
 	}
 }
@@ -312,8 +318,8 @@ void ParseConfig::parseLocationToken(std::vector<std::string>::iterator &it, Loc
 			locParseUploadPath(it, config);
 			break;
 		default:
-			std::string errMsg = "Error\nInvalid token in location context: " + *it;
-			throw ParseErrException(errMsg.c_str());
+			std::string msg = "Error\nInvalid token in location context: " + *it;
+			throw ParseErrException(msg.c_str());
 			break;
 	}
 }
@@ -500,7 +506,7 @@ void ParseConfig::servParseListen(std::vector<std::string>::iterator &it, Server
 
 	size_t colon = (*it).find(':');
 	if (colon == std::string::npos)
-		config.addListen("0.0.0.0", *it); //+ Add default
+		config.addListen(DEFAULT_HOST, *it); //+ Add default
 	else
 		config.addListen((*it).substr(0, colon), (*it).substr(colon + 1)); //+ Split
 

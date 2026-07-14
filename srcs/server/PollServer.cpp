@@ -42,6 +42,7 @@ void	PollServer::run(void)
 		throw runtimePollServerException("Error\nNo file descriptor to poll.");
 	while (1)
 	{
+		monitorClients();
 		int ready_count = poll(&this->_pollfds[0], this->_pollfds.size(), -1);
 		if (ready_count == -1)
 		{
@@ -91,7 +92,7 @@ void	PollServer::run(void)
 			if (events & POLLHUP)
 			{
 				Client *c = this->_clients[current_fd];
-				if (c->getWriteBuffer().empty() && c->isResponseQueueEmpty())
+				if (c->isWriteBufferEmpty() && c->isResponseQueueEmpty())
 					this->clientDisconnect(current_fd);
 			}
 		}

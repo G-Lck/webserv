@@ -1,17 +1,5 @@
 #include "../../includes/utils.hpp"
 
-bool request_is_complete(Client* client)
-{
-    if (client->getReadBuffer().find("aaa") != std::string::npos)
-        return true;
-    return false;
-}
-
-std::string extract_request(Client* client)
-{
-    return client->getReadBuffer();
-}
-
 std::string process_and_build_response(Client* client)
 {
 	client->getRequest().printRequest();
