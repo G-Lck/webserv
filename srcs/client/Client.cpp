@@ -38,6 +38,12 @@ void Client::appendToWriteBuffer(const std::string& data)
     this->_write_buffer.append(data);
 }
 
+void Client::eraseProcessedRequest()
+{
+    size_t consumed = this->_request.getConsumedBytes();
+    this->eraseFromReadBuffer(consumed);
+}
+
 void Client::eraseWriteBuffer(size_t n)
 {
     _write_offset += n;
@@ -106,6 +112,8 @@ void	Client::popFrontResponse()
 {
 	this->_response_queue.pop_front();
 }
+
+// --- Keep alive logic ---
 
 bool Client::getKeepAlive() const
 {

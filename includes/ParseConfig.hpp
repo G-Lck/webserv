@@ -42,6 +42,9 @@ class ParseConfig
 		void        parseLocation(std::vector<std::string>::iterator &it, GlobalConfig &config, LocationConfig &locConfig);
 		void        parseServer(std::vector<std::string>::iterator &it, GlobalConfig &config, ServerConfig &servConfig);
 
+		//+ ---- Validate dirs ----
+		void		validatePaths( GlobalConfig &config ) const;
+
 		//+ ---- Parse Helpers ----
 		int     getGlobalType(std::string& token);
 		int     getServerType(std::string& token);

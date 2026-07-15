@@ -15,7 +15,8 @@ LocationConfig::LocationConfig(const LocationConfig &other) :
 	_cgi_handler(other._cgi_handler),
 	_limit_except(other._limit_except),
 	_return_url(other._return_url),
-	_return_code(other._return_code)
+	_return_code(other._return_code),
+	_upload_path(other._upload_path)
 {}
 
 LocationConfig& LocationConfig::operator=(const LocationConfig& other)
@@ -32,6 +33,7 @@ LocationConfig& LocationConfig::operator=(const LocationConfig& other)
 		this->_limit_except = other._limit_except;
 		this->_return_url = other._return_url;
 		this->_return_code = other._return_code;
+		this->_upload_path = other._upload_path;
 	}
 	return *this;
 }

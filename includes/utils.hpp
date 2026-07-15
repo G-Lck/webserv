@@ -9,18 +9,14 @@
 
 std::string		process_and_build_response( Client *client );                     
 
-void		erase_request_from_buffer( Client *client );
-
-void		writeLog( std::string msg, int flag );
+void			writeLog( std::string msg, int flag );
    
-void			erase_request_from_buffer( Client *client );
-
 std::string		getRecvErrorStr( int err );
 
 std::string		getEpollCtlErrorStr( int err );
 
 std::string		getSendErrorStr( int err );
 
-std::string stringifyConfig(GlobalConfig &config, int flag);
+std::string		stringifyConfig(GlobalConfig &config, int flag);
    
 #endif

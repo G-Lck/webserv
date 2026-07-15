@@ -285,7 +285,7 @@ void	AServer::handleCompleteRequest(int fd)
 
 	// Clean up: erase the processed request from the read buffer, resets state for the next request.
 	c->addResponseQueue(single_response);
-	erase_request_from_buffer(c);
+	c->eraseProcessedRequest();
 	c->wantsKeepAlive(); // Set the _keep_alive member variable before reseting the request
 	c->resetCurrentRequest();
 

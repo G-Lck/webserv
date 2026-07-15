@@ -1,5 +1,11 @@
 #include "../../includes/ParseConfig.hpp"
 
+//+ ---- Path validation ----
+
+static bool isValidDirectory(const std::string& path);
+static bool isWritableDirectory(const std::string& path);
+static bool isValidFile(const std::string& path, int flag);
+
 // ------ Orthodox ------
 
 ParseConfig::ParseConfig() {}
@@ -97,7 +103,9 @@ void ParseConfig::parse(GlobalConfig &config)
 	parseConfig(it, config);
 	if (config.serverCount() == 0)
 		throw ParseErrException("Error: no servers in config file");
+	validatePaths(config);
 }
+
 
 void ParseConfig::parseConfig(std::vector<std::string>::iterator &it, GlobalConfig &config)
 {
@@ -138,8 +146,9 @@ void ParseConfig::parseServer(std::vector<std::string>::iterator &it, GlobalConf
 	if (*it == "location")
 	{
 		it++; // Skip "location"
-		if ((*it)[0] != '/')
+		if (it == this->_tokens.end() || (*it)[0] != '/')
 			throw ParseErrException("Error\nWrong path format at location");
+	
 		std::string path = *it;
 		it++; // Skip path
 		if (it == this->_tokens.end() || *it != "{")
@@ -149,6 +158,13 @@ void ParseConfig::parseServer(std::vector<std::string>::iterator &it, GlobalConf
 		LocationConfig newLocConf;
 		newLocConf.setPath(path);
 		parseLocation(it, config, newLocConf);
+
+		const std::vector<LocationConfig>& existing = servConfig.getLocations();
+		for (std::vector<LocationConfig>::const_iterator loc_it = existing.begin(); loc_it != existing.end(); ++loc_it)
+		{
+			if (loc_it->getPath() == path)
+				throw ParseErrException("Error\nDuplicate location path in same server.");
+		}
 		servConfig.addLocation(newLocConf);
 	}
 	else
@@ -340,7 +356,7 @@ void    ParseConfig::parseRoot(std::vector<std::string>::iterator &it, T &config
 
 	if ((*it)[0] != '/') //+ Check if root is absolute
 		throw ParseErrException("Error\nRoot value not absolute.");
-		
+
 	config.setRoot(*it); //+ Add root
 	it++; // Skip value
 
@@ -354,6 +370,11 @@ void    ParseConfig::parseRoot(std::vector<std::string>::iterator &it, T &config
 template <typename T>
 void	ParseConfig::parseIndex(std::vector<std::string>::iterator &it, T &config)
 {
+	if (!config.getIndex().empty()) //+ Check if it was set before
+	{
+		throw ParseErrException("Error\nMore than one index directive.");
+	}
+
 	std::vector<std::string> newIndexes;
 
 	it++; // Skip index
@@ -370,9 +391,7 @@ void	ParseConfig::parseIndex(std::vector<std::string>::iterator &it, T &config)
 		throw ParseErrException("Error\nEmpty index directive.");
 		
 	for (std::vector<std::string>::iterator i_it = newIndexes.begin(); i_it != newIndexes.end(); ++i_it)
-	{
 		config.addIndex(*i_it); //+ Add to GlobalConfig
-	}
 	it++; //Skip semicolon
 }
 
@@ -396,6 +415,9 @@ void	ParseConfig::parseErrorPages(std::vector<std::string>::iterator &it, T &con
 	if (temp.empty()) //+ Check not empty
 		throw ParseErrException("Error\nEmpty error_page directive.");
 	std::string path = temp.back(); //+ Store last one (always the path)
+	if (path.empty() || path[0] != '/')
+		throw ParseErrException("Error\nError page path must be absolute (start with '/').");
+
 	t_it = temp.begin();
 	if (temp.size() < 2) //+ Check at least 2, need HTTP error code + Value (path to page)
 		throw ParseErrException("Error\nMissing path or error code in error_pages.");
@@ -412,7 +434,7 @@ void	ParseConfig::parseErrorPages(std::vector<std::string>::iterator &it, T &con
 }
 
 /// @brief Function to parse and add autoindex to the config
-/// @exception Missing semicolon, empty value, accepts onlz "yes" or "no"
+/// @exception Missing semicolon, empty value, accepts onlz "on" or "off"
 template <typename T>
 void	ParseConfig::parseAutoindex(std::vector<std::string>::iterator &it, T &config)
 {
@@ -420,9 +442,9 @@ void	ParseConfig::parseAutoindex(std::vector<std::string>::iterator &it, T &conf
 	if (it == this->_tokens.end() || *it == ";") //+ Check if not empty
 		throw ParseErrException("Error\nWrong autoindex directive.");
 
-	if ((*it).compare("yes")) //+ Validate yes
+	if (*it == "on") //+ Validate yes
 		config.setAutoindex(true);
-	else if ((*it).compare("no")) //+ Validate no
+	else if (*it == "off") //+ Validate no
 		config.setAutoindex(false);
 	else
 		throw ParseErrException("Error\nWrong autoindex directive.");
@@ -475,10 +497,18 @@ void    ParseConfig::parseCGI(std::vector<std::string>::iterator &it, T &config)
     if (it == this->_tokens.end() || *it == ";" || *it == "}") //+ Check empty path
         throw ParseErrException("Error\nMissing cgi path.");
 
-    if ((*it)[0] != '/') //+ Check valid dir
-        throw ParseErrException("Error\nCGI path must be absolute.");
-    std::string path = *it;
-    
+    if ((*it)[0] != '/')	//+ Check valid dir
+	{
+		throw ParseErrException("Error\nCGI path must be absolute.");
+	}
+
+	std::string path = *it;
+
+    if (!isValidFile(path, X_OK)) //+ Check interpreter exists and is executable
+	{
+    	throw ParseErrException("Error\nCGI interpreter path invalid or not executable.");
+	}
+
 	it++;
     if (it == this->_tokens.end() || *it == "}") //+ Find semicolon or end
         throw ParseErrException("Error\nMissing semicolon after cgi.");
@@ -609,7 +639,7 @@ void	ParseConfig::locParseUploadPath(std::vector<std::string>::iterator &it, Loc
 
 	if ((*it)[0] != '/') //+ Valid path
 		throw ParseErrException("Error\nUpload path must be absolute (start with '/').");
-		
+	
 	config.setUploadPath(*it);
 	
 	it++;
@@ -617,6 +647,137 @@ void	ParseConfig::locParseUploadPath(std::vector<std::string>::iterator &it, Loc
 		throw ParseErrException("Error\nMissing semicolon after upload_path.");
 		
 	it++; // Skip semicolon
+}
+
+// --------- FILE VALIDATION ---------
+
+/// @brief Validates a path for a directory with stat() and access()
+/// @param path dir to validate
+static bool isValidDirectory(const std::string& path)
+{
+	struct stat s;
+	if (stat(path.c_str(), &s) != 0)
+		return false;              // doesn't exist
+	if (!S_ISDIR(s.st_mode))
+		return false;              // exists but isn't a directory
+	if (access(path.c_str(), R_OK) != 0)
+		return false;              // exists, is a dir, but not readable
+	return true;
+}
+
+/// @brief Checks if is that dir is write ok (W_OK) for uploads
+/// @param path the dir to validate
+static bool isWritableDirectory(const std::string& path)
+{
+	return access(path.c_str(), W_OK) == 0;
+}
+
+/// @brief Checks if is that file is executable (for the cgi)
+/// @param path the file to validate
+/// @param flag X_OK for checking if executable (cgi) and R_OK readable (error pages)
+static bool isValidFile(const std::string& path, int flag)
+{
+    struct stat s;
+    if (stat(path.c_str(), &s) != 0)
+        return false;
+    if (!S_ISREG(s.st_mode))
+        return false;
+    if (access(path.c_str(), flag) != 0)
+        return false;
+    return true;
+}
+
+void	ParseConfig::validatePaths( GlobalConfig &config ) const
+{
+	std::string root = config.getRoot();
+
+	//+ Check GlobalConfig paths (only if a global root was actually set)
+	if (!root.empty())
+	{
+		if (!isValidDirectory("." + root))
+			throw ParseErrException("Error\nInvalid global root directory.");
+
+		//* indexes
+		const std::vector<std::string>& indexes = config.getIndex();
+		for (std::vector<std::string>::const_iterator idx = indexes.begin(); idx != indexes.end(); ++idx)
+		{
+			if (!isValidFile("." + root + "/" + *idx, R_OK))
+				throw ParseErrException("Error\nInvalid global index file.");
+		}
+
+		//* error_pages
+		const std::map<int, std::string>& error_pages = config.getErrorPages();
+		for (std::map<int, std::string>::const_iterator ep = error_pages.begin(); ep != error_pages.end(); ++ep)
+		{
+			if (!isValidFile("." + root + ep->second, R_OK))
+				throw ParseErrException("Error\nInvalid global error page.");
+		}
+	}
+
+	const std::vector<std::string>& indexes = config.getIndex();
+	const std::map<int, std::string>& error_pages = config.getErrorPages();
+
+	//+ Check ServerConfig paths
+	for (size_t i = 0; i < config.serverCount(); i++)
+	{
+		const ServerConfig& s = config.getServers(i);
+		std::string sRoot = s.getRoot().empty() ? root : s.getRoot();
+
+		if (!isValidDirectory("." + sRoot))
+			throw ParseErrException("Error\nInvalid server root directory.");
+
+		//* indexes
+		const std::vector<std::string>& sIndexes = s.getIndex().empty() ? indexes : s.getIndex();
+		for (std::vector<std::string>::const_iterator idx = sIndexes.begin(); idx != sIndexes.end(); ++idx)
+		{
+			if (!isValidFile("." + sRoot + "/" + *idx, R_OK))
+				throw ParseErrException("Error\nInvalid server index file.");
+		}
+
+		//* error pages
+		const std::map<int, std::string>& sErrPages = s.getErrorPage().empty() ? error_pages : s.getErrorPage();
+		for (std::map<int, std::string>::const_iterator ep = sErrPages.begin(); ep != sErrPages.end(); ++ep)
+		{
+			if (!isValidFile("." + sRoot + ep->second, R_OK))
+				throw ParseErrException("Error\nInvalid server error page.");
+		}
+
+		//+ Check LocationConfig paths
+		const std::vector<LocationConfig>& locations = s.getLocations();
+		for (std::vector<LocationConfig>::const_iterator it = locations.begin(); it != locations.end(); ++it)
+		{
+			//* root (inherit if empty)
+			std::string locRoot = it->getRoot().empty() ? sRoot : it->getRoot();
+
+			if (!isValidDirectory("." + locRoot))
+				throw ParseErrException("Error\nInvalid location root directory.");
+
+			//* indexes
+			const std::vector<std::string>& locIndexes = it->getIndex().empty() ? sIndexes : it->getIndex();
+			for (std::vector<std::string>::const_iterator idx = locIndexes.begin(); idx != locIndexes.end(); ++idx)
+			{
+				if (!isValidFile("." + locRoot + "/" + *idx, R_OK))
+					throw ParseErrException("Error\nInvalid location index file.");
+			}
+
+			//* error pages
+			const std::map<int, std::string>& locErrPages = it->getErrorPages().empty() ? sErrPages : it->getErrorPages();
+			for (std::map<int, std::string>::const_iterator ep = locErrPages.begin(); ep != locErrPages.end(); ++ep)
+			{
+				if (!isValidFile("." + locRoot + ep->second, R_OK))
+					throw ParseErrException("Error\nInvalid location error page.");
+			}
+
+			//* upload path
+			if (!it->getUploadPath().empty())
+			{
+				if (!isValidDirectory("." + it->getUploadPath()))
+					throw ParseErrException("Error\nInvalid upload_path directory.");
+				if (!isWritableDirectory("." + it->getUploadPath()))
+					throw ParseErrException("Error\nNon-writable upload_path directory.");
+			}
+		}
+	}
 }
 
 // --------- COMPILER STUFF ---------

@@ -16,7 +16,7 @@
 #define MAX_WAIT_TIME 60			// Time in seconds, how long we wait until closing a Client
 #define SERVER_REFRESH_TIME 500		// Time in miliseconds, basically how often epoll_wait() is called in the main loop
 
-//* --- ERROR LOG DEFINES ---
+//* --- LOG DEFINES ---
 
 enum LogFiles
 {
@@ -58,8 +58,9 @@ enum LogFiles
 #endif
 
 // --- POSIX File System & CGI ---
-#include <sys/stat.h>   // stat() (to check if an HTML file exists before serving)
-#include <dirent.h>     // opendir(), readdir(), closedir() (for autoindex)
+#include <sys/stat.h>	// stat() (to check if an HTML file exists before serving)
+#include <unistd.h>
+#include <dirent.h>		// opendir(), readdir(), closedir() (for autoindex)
 
 // --- POSIX signals ---
 #include <signal.h>
