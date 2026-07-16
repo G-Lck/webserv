@@ -20,12 +20,12 @@
 
 enum LogFiles
 {
-	INFO,
-	ACCESS,
-	SERVER_EVENTS,
-	ERROR_INFO,
-	ERROR_WARNING,
-	STATUS_CODE,
+	INFO,			// Has Global config after parsing, maybe we can also add failed parsings
+	ACCESS,			// Has nothing so far
+	SERVER_EVENTS,	// Has client and socket connection, client disconection, cleint timout, logs a full request
+	ERROR_INFO,		// Has severe errors (weird stuff)
+	ERROR_WARNING,	// Has minor errors	(more like functions that we need to use that have unexpected cases)
+	STATUS_CODE,	// Self explained
 };
 
 // --- C++ Standard Core ---

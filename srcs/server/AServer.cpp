@@ -123,7 +123,7 @@ void	AServer::monitorClients()
 		{
 			std::ostringstream oss;
 			oss << *(it->second) << " --> Client Timeout";
-			writeLog(oss.str(), SERVER_EVENTS);
+			writeLog(oss.str(), SERVER_EVENTS); //+ Log Client timeout
 
 			this->clientDisconnect(it->first);
 		}
@@ -166,13 +166,20 @@ bool	AServer::addNewClient(int curr_socket_fd)
 	{
 		if (errno == EAGAIN || errno == EWOULDBLOCK)
 			return (false);
-		std::cout << "accept() failed: " << strerror(errno) << std::endl; //~asdasdasd
+
+		std::ostringstream oss;
+		oss << "accept() failed: on Client creation --> strerror(errno): " << strerror(errno);
+		writeLog(oss.str(), SERVER_EVENTS); //+ Log Client error
+
 		return (false);
 	}
 	// Try to set to non-block
 	if (fcntl(fd_client, F_SETFL, O_NONBLOCK) == -1)
 	{
-		std::cout << "fcntl() failed: " << strerror(errno) << std::endl; //~asdasdasd
+		std::ostringstream oss;
+		oss << "fcntl() failed: on Client creation --> strerror(errno): " << strerror(errno);
+		writeLog(oss.str(), SERVER_EVENTS); //+ Log Client error
+
 		close(fd_client);
 		return (false);
 	}
@@ -226,11 +233,15 @@ void    AServer::readRequest(int fd)
 		//+ EINTR  The receive was interrupted by delivery of a signal before any data was available
 		if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
 		{
-			writeLog(getRecvErrorStr(errno), ERROR_WARNING); //~ HERE I THINK WE SHOULD LOG IN ANOTHER FILE, LIKE A WARNING AND NOT AN ERROR, THE CLIENT WONT BE DISCONECTED
+			std::stringstream ss;
+			ss << "recv() error -> " << getRecvErrorStr(errno);
+			writeLog(ss.str(), ERROR_WARNING);
 			return ;
 		}
 		//+ In any other case we log error
-		writeLog(getRecvErrorStr(errno), ERROR_INFO);
+		std::stringstream ss;
+		ss << "recv() error -> " << getRecvErrorStr(errno);
+		writeLog(ss.str(), ERROR_INFO);
 		this->clientDisconnect(fd);
 	}
 	else
@@ -364,10 +375,14 @@ void    AServer::sendResponse(int fd)
 		// EINTR  The receive was interrupted by delivery of a signal before any data was available
 		if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
 		{
-			writeLog(getSendErrorStr(errno), ERROR_WARNING); //~ HERE I THINK WE SHOULD LOG IN ANOTHER FILE, LIKE A WARNING AND NOT AN ERROR, THE CLIENT WONT BE DISCONECTED
+			std::stringstream ss;
+			ss << "send() error -> " << getRecvErrorStr(errno);
+			writeLog(ss.str(), ERROR_WARNING);
 			return ;
 		}
-		writeLog(getSendErrorStr(errno), ERROR_INFO);
+		std::stringstream ss;
+		ss << "send() error -> " << getRecvErrorStr(errno);
+		writeLog(ss.str(), ERROR_INFO);
 		this->clientDisconnect(fd);
 		return ;
 	}

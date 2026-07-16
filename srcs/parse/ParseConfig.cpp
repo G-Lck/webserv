@@ -5,6 +5,7 @@
 static bool isValidDirectory(const std::string& path);
 static bool isWritableDirectory(const std::string& path);
 static bool isValidFile(const std::string& path, int flag);
+static bool isValidConfigFile(const std::string& path);
 
 // ------ Orthodox ------
 
@@ -26,6 +27,9 @@ ParseConfig::ParseErrException::ParseErrException(const char* message) : std::ru
 /// @exception Throws ParseErrExeption in case the file is not found, empty, or has unclosed brackets
 std::string	ParseConfig::getFileText( const char* dir_c )
 {
+	if (!isValidConfigFile(dir_c))
+		throw ParseErrException("Error\nWrong File");
+
 	std::ifstream	givenFile(dir_c);
 	if (!givenFile.is_open())
 		throw ParseErrException("Error\nWrong File");
@@ -651,6 +655,7 @@ void	ParseConfig::locParseUploadPath(std::vector<std::string>::iterator &it, Loc
 
 // --------- FILE VALIDATION ---------
 
+
 /// @brief Validates a path for a directory with stat() and access()
 /// @param path dir to validate
 static bool isValidDirectory(const std::string& path)
@@ -685,6 +690,22 @@ static bool isValidFile(const std::string& path, int flag)
     if (access(path.c_str(), flag) != 0)
         return false;
     return true;
+}
+
+static bool isValidConfigFile(const std::string& path)
+{
+	struct stat s;
+
+	if (stat(path.c_str(), &s) != 0)
+		return false;              // doesn't exist
+
+	if (S_ISDIR(s.st_mode))
+		return false;              // it's a directory
+
+	if (path.length() < 5 || path.substr(path.length() - 5) != ".conf")
+		return false;              // not a .conf file
+
+	return true;
 }
 
 void	ParseConfig::validatePaths( GlobalConfig &config ) const
