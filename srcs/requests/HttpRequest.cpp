@@ -20,6 +20,20 @@ HttpRequest& HttpRequest::operator=(const HttpRequest& other) {
 
 HttpRequest::~HttpRequest() {}
 
+std::ostream &operator<<(std::ostream &out, HttpRequest const &req )
+{
+	out << req.getMethod() << " " << req.getPath() << " " << req.getVersion() << " ";
+	
+	std::map<std::string, std::string> headers_list = req.getHeaders();
+	std::map<std::string, std::string>::const_iterator it = headers_list.begin();
+	while (it != headers_list.end())
+	{
+		out << it->first << ":" << it->second;
+		it++;
+	}
+	return out;
+}
+
 
 /// @brief parse the first line of the request, it should be a method (GET, POST, DELETE),
 /// a path (begining by a /) and a version (HTTP/1.0 or HTTP/1.1). They are stored in HttpRequest.
@@ -182,4 +196,30 @@ void	HttpRequest::printRequest() const
 	}
 	std::cout << "Body" << std::endl << _body << std::endl;
 	std::cout << "consumed bytes: " << this->_consumed_bytes << std::endl;
+}
+
+const std::string& HttpRequest::getMethod() const
+{
+	return _method;
+}
+
+const std::string& HttpRequest::getPath() const
+{
+	return _path;
+}
+
+const std::string& HttpRequest::getQueryString() const
+{
+	return _query_string;
+}
+
+const std::string& HttpRequest::getVersion() const
+{
+	return _version;
+}
+
+
+const std::string& HttpRequest::getBody() const
+{
+	return _body;
 }

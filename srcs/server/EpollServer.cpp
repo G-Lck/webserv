@@ -160,6 +160,7 @@ void	EpollServer::closeEpoll(void)
 	this->_epoll_fd = -1;
 }
 
+
 #else
 
 void	EpollServer::initMultiplexer(void)

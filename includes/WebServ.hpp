@@ -13,7 +13,7 @@
 
 #define DEFAULT_HOST "0.0.0.0"
 #define DEFAULT_PORT "8080"
-#define MAX_WAIT_TIME 60			// Time in seconds, how long we wait until closing a Client
+#define MAX_WAIT_TIME 5			// Time in seconds, how long we wait until closing a Client
 #define SERVER_REFRESH_TIME 500		// Time in miliseconds, basically how often epoll_wait() is called in the main loop
 
 //* --- LOG DEFINES ---
