@@ -33,6 +33,7 @@ class	AServer
 		void	readRequest(int fd);
 		void	sendResponse(int fd);
 		bool	clientTimeout( int fd );
+		void	refreshClientTime( int fd );
 		void	monitorClients();
 
 		virtual void	initMultiplexer(void) = 0;

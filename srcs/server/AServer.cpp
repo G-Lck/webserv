@@ -89,6 +89,14 @@ void	AServer::closeClients(void)
 }
 // --------------- Monitoring ---------------
 
+void	AServer::refreshClientTime( int fd )
+{
+	std::map<int, Client*>::iterator it = this->_clients.find(fd);
+	if (it == this->_clients.end())
+		return ;
+	it->second->updateTime();
+}
+
 bool	AServer::clientTimeout( int fd )
 {
 	std::map<int, Client*>::iterator it = this->_clients.find(fd);
@@ -116,6 +124,7 @@ void	AServer::monitorClients()
 			std::ostringstream oss;
 			oss << *(it->second) << " --> Client Timeout";
 			writeLog(oss.str(), SERVER_EVENTS);
+
 			this->clientDisconnect(it->first);
 		}
 		it = next;

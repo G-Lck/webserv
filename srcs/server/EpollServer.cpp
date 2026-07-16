@@ -68,13 +68,18 @@ void	EpollServer::run(void)
 		throw runtimeEpollServerException("Error\nNo sockets to serve.");
 	while (1)
 	{
-		monitorClients();
 		int fd_count = epoll_wait(this->_epoll_fd, this->_active_events, MAX_EVENTS, SERVER_REFRESH_TIME);
 		if (fd_count == -1)
 		{
 			if (errno == EINTR)
 				continue;
 			throw runtimeEpollServerException((std::string("Error fatal:\n") + strerror(errno)).c_str());
+		}
+		if (fd_count == 0) //+ Case for no active events
+		{
+			// timeout expired
+			monitorClients();
+			continue;
 		}
 		// Here we are itearing on all the events to run the right case for each fd
 		for (int i = 0; i < fd_count; ++i)
@@ -92,16 +97,18 @@ void	EpollServer::run(void)
 			// read the incoming request
 			else if (this->_active_events[i].events & EPOLLIN)
 			{
-				
+				this->refreshClientTime(current_fd);
 				this->readRequest(current_fd);
 			}
 			// current_fd is an existing client, and it's ready to receive
 			// data (EPOLLOUT): send the pending response
 			else if (this->_active_events[i].events & EPOLLOUT)
 			{
+				this->refreshClientTime(current_fd);
 				this->sendResponse(current_fd);
 			}
 		}
+		monitorClients(); //+ Check again all, case for when an active event
 	}
 }
 
