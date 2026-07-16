@@ -5,6 +5,7 @@ class AHandler
 {
 	private:
 		Client	_client;
+		
 	public:
 		AHandler();
 		AHandler(const AHandler& other);
