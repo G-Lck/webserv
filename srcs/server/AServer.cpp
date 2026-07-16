@@ -43,7 +43,10 @@ void	AServer::configAServer(GlobalConfig &config)
 				this->_fd_to_route[newSocket->getFd()] = ports[j];
 				used_ports.push_back(ports[j]);
 				this->addSocket(newSocket);
-				std::cout << ports[j].first << "::" << ports[j].second << std::endl;
+
+				std::stringstream ss;
+				ss << (*newSocket) << " --> Connection Success";
+				writeLog(ss.str(), SERVER_EVENTS); //+ Log adding a socket
 			}
 			this->_virtualServers[ports[j]].push_back(ServConf);
 		}
@@ -111,7 +114,7 @@ void	AServer::monitorClients()
 		if (clientTimeout(it->first))
 		{
 			std::ostringstream oss;
-			oss << "Client timeout, disconnecting fd " << it->first << std::endl;
+			oss << *(it->second) << " --> Client Timeout";
 			writeLog(oss.str(), SERVER_EVENTS);
 			this->clientDisconnect(it->first);
 		}
@@ -181,6 +184,9 @@ bool	AServer::addNewClient(int curr_socket_fd)
 		close(fd_client);
 		return (false);
 	}
+	std::stringstream ss;
+	ss << (*newClient) << " -> Connetion Success";
+	writeLog(ss.str(), SERVER_EVENTS); //+ Log adding a client
 	return (true);
 }
 
@@ -194,33 +200,33 @@ bool	AServer::addNewClient(int curr_socket_fd)
 void    AServer::readRequest(int fd)
 {
 	char buffer[4096];
-	//	recv(): receives messages from a socket
+	//+	recv(): receives messages from a socket
 	int bytes_read = recv(fd, buffer, sizeof(buffer), 0);
 
-	// man recv(): When a stream socket peer has performed an orderly shutdown, the
-    // return value will be 0 (the traditional "end-of-file" return)
+	//+ man recv(): When a stream socket peer has performed an orderly shutdown, the
+    //+ return value will be 0 (the traditional "end-of-file" return)
 	if (bytes_read == 0)
 	{
 		this->clientDisconnect(fd);
 	}
 	else if (bytes_read < 0)
 	{
-		// man recv(): EAGAIN or EWOULDBLOCK: The socket is marked nonblocking and the receive operation
-		// would block, or a receive timeout had been set and the
-		// timeout expired before data was received.
-		// EINTR  The receive was interrupted by delivery of a signal before any data was available
+		//+ man recv(): EAGAIN or EWOULDBLOCK: The socket is marked nonblocking and the receive operation
+		//+ would block, or a receive timeout had been set and the
+		//+ timeout expired before data was received.
+		//+ EINTR  The receive was interrupted by delivery of a signal before any data was available
 		if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
 		{
 			writeLog(getRecvErrorStr(errno), ERROR_WARNING); //~ HERE I THINK WE SHOULD LOG IN ANOTHER FILE, LIKE A WARNING AND NOT AN ERROR, THE CLIENT WONT BE DISCONECTED
 			return ;
 		}
-		// In any other case we log error
+		//+ In any other case we log error
 		writeLog(getRecvErrorStr(errno), ERROR_INFO);
 		this->clientDisconnect(fd);
 	}
 	else
 	{
-		// Tries to match the fd, with the fd on the Clients map
+		//+ Tries to match the fd, with the fd on the Clients map
 		std::map<int, Client*>::iterator it = _clients.find(fd);
 		// If not found we log error and continue
 		if (it == _clients.end())
@@ -228,11 +234,15 @@ void    AServer::readRequest(int fd)
 			writeLog("readRequest: unknown fd", ERROR_INFO);
 			return ;
 		}
-		// Otherwise we append to buffer until the request is finished
+		//+ Otherwise we append to buffer until the request is finished
 		Client* c = it->second;
 		c->appendToReadBuffer(buffer, bytes_read);
 		while (c->parseBufferedRequest() == true)
 		{
+			std::stringstream ss;
+			ss << (*c) << " -> Complete request recieved";
+			writeLog(ss.str(), SERVER_EVENTS); //+ Log request
+	
 			this->handleCompleteRequest(fd);
 			if (!c->getKeepAlive())
 			{
@@ -258,6 +268,10 @@ void	AServer::clientDisconnect(int fd)
 	std::map<int, Client*>::iterator it = this->_clients.find(fd);
 	if (it != this->_clients.end())
 	{
+		std::stringstream ss;
+		ss << *(it->second) << " -> Client Disconnect";
+		writeLog(ss.str(), SERVER_EVENTS);
+
 		delete it->second;
 		this->_clients.erase(it);
 	}

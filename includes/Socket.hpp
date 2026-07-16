@@ -8,10 +8,11 @@
 class	Socket
 {
 	private:
-		int					_status; 
-		int					_fd;
-		struct addrinfo		_hints;
-		struct addrinfo*	_socket;
+		int									_status; 
+		int									_fd;
+		std::pair<std::string, std::string>	_host_port;
+		struct addrinfo						_hints;
+		struct addrinfo*					_socket;
 
 		Socket( Socket const &other );
 		Socket &operator=( Socket const &other );
@@ -38,9 +39,12 @@ class	Socket
 		void	makeSocket( std::string host, std::string port );
 
 		//+ --- Getters / Setters / Helpers ---
-		int		getFd(void);
-		void	setFd( int n );
-		void	closeFd(void);
+		int									getFd(void) const;
+		void								setFd( int n );
+		std::pair<std::string, std::string> getHostPort() const;
+		void								closeFd(void);
 };
+
+std::ostream &operator<<( std::ostream &out, Socket const &s );
 
 #endif

@@ -118,6 +118,7 @@ void	Socket::makeSocket( std::string host, std::string port )
 	this->socketFreeAddrInfo();
 	this->socketListen();
 	this->socketSetNonBlock();
+	this->_host_port = std::make_pair(host, port);
 }
 
 // --- Helpers ---
@@ -125,7 +126,15 @@ void	Socket::makeSocket( std::string host, std::string port )
 /// @brief	Close the file descriptor attached to this Socket.
 void	Socket::closeFd(void) { if (this->_fd != -1) { close(this->_fd); this->_fd = -1; } }
 
-int		Socket::getFd(void) { return (this->_fd); }
+int		Socket::getFd(void) const { return (this->_fd); }
 
 void	Socket::setFd( int n ) { this->_fd = n; }
+
+std::pair<std::string, std::string> Socket::getHostPort() const { return this->_host_port; }
+
+std::ostream &operator<<( std::ostream &out, Socket const &s )
+{
+	out << "Socket [" << s.getFd() << "] " << s.getHostPort().first << ":" << s.getHostPort().second;
+	return (out);
+}
 
