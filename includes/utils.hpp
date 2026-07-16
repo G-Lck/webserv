@@ -3,9 +3,7 @@
 
 #include "WebServ.hpp"
 #include "Client.hpp"
-#include "Log.hpp"
 #include "GlobalConfig.hpp"
-
 
 std::string		process_and_build_response( Client *client );                     
 

@@ -12,6 +12,11 @@ void	writeLog( const std::string msg, int flag )
 		std::ofstream outfile_info("./log/info.log", std::ios::app);
 		outfile_info << t << ": " << msg << std::endl;
 	}
+	if (flag == STATUS_CODE)
+	{
+		std::ofstream outfile_status_code("./log/status_code.log", std::ios::app);
+		outfile_status_code << t << ": " << msg << std::endl;
+	}
 	if (flag == ACCESS)
 	{
 		std::ofstream outfile_access("./log/access.log", std::ios::app);
