@@ -3,4 +3,4 @@
 */*.o
 */*/*.o
 log/*.log
-./WebServ
+WebServ

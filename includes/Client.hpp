@@ -19,18 +19,19 @@ class Client
 		time_t 								_last_activity;
 		bool								_keep_alive;
 
-		Client(const Client& other);
-		Client& operator=(const Client& other);
 	public:
 
 		Client();
 		Client(int fd, std::pair<std::string, std::string>	host_port);
+		Client(const Client& other);
+		Client& operator=(const Client& other);
 		~Client();
 
 	const std::string&					getReadBuffer()		const;
 	const char*							getWriteData() 		const;
 	size_t								getWriteRemaining() const;
 	const HttpRequest&					getRequest()		const;
+	const std::deque<std::string>&		getResponseQueue() const;
 	time_t								getLastActivity()	const;
 	int									getFd()				const;
 	std::pair<std::string, std::string>	getHostPort() 		const;

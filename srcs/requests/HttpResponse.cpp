@@ -16,3 +16,43 @@ HttpResponse& HttpResponse::operator=(const HttpResponse& other) {
 }
 
 HttpResponse::~HttpResponse() {}
+
+int	HttpResponse::getStatusCode() const
+{
+	return this->_status_code;
+}
+
+const std::string&	HttpResponse::getStatusMessage() const
+{
+	return this->_status_message;
+}
+
+std::map<std::string, std::string>	HttpResponse::getHeaders() const
+{
+	return this->_headers;
+}
+
+const std::string&	HttpResponse::getBody() const
+{
+	return this->_body;
+}
+
+bool	HttpResponse::getConnection() const
+{
+	return this->_connection;
+}
+
+std::ostream &operator<<(std::ostream &out, HttpResponse const &req )
+{
+	out << req.getStatusCode() << " " << req.getStatusMessage() << " ";
+	
+	std::map<std::string, std::string> headers_list = req.getHeaders();
+	std::map<std::string, std::string>::const_iterator it = headers_list.begin();
+	while (it != headers_list.end())
+	{
+		out << it->first << ":" << it->second << " ";
+		it++;
+	}
+	out << req.getBody();
+	return out;
+}

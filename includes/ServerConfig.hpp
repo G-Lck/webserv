@@ -21,10 +21,10 @@ class ServerConfig {
 		int									_client_max_body_size;
 		std::pair<std::string, std::string>	_cgi_handler;
 
-		ServerConfig& operator=(const ServerConfig& other);
 	public:
 		ServerConfig();
 		ServerConfig(const ServerConfig& other);
+		ServerConfig& operator=(const ServerConfig& other);
 		~ServerConfig();
 
 		//+ ---- Getters ----
