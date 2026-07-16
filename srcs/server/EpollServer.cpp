@@ -69,7 +69,7 @@ void	EpollServer::run(void)
 	while (1)
 	{
 		monitorClients();
-		int fd_count = epoll_wait(this->_epoll_fd, this->_active_events, MAX_EVENTS, 500);
+		int fd_count = epoll_wait(this->_epoll_fd, this->_active_events, MAX_EVENTS, SERVER_REFRESH_TIME);
 		if (fd_count == -1)
 		{
 			if (errno == EINTR)

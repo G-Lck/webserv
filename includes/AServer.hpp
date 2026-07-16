@@ -15,7 +15,7 @@ class	AServer
 		std::map<int, Socket*>				_sockets;
 		std::map<int, Client*>				_clients;
 		t_virtualServer						_virtualServers;
-		t_fdRoute							_fd_to_route;
+		t_fdRoute							_fd_to_route; // This is to give to the handler, to know in which socket the client is connected, to after know in which virtual server i have to go
 		
 		AServer(AServer const &other );
 		AServer &operator=( AServer const &other );

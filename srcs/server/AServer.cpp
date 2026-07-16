@@ -111,7 +111,7 @@ void	AServer::monitorClients()
 		if (clientTimeout(it->first))
 		{
 			std::ostringstream oss;
-			oss << "Client timeout, disconnecting fd " << it->first;
+			oss << "Client timeout, disconnecting fd " << it->first << std::endl;
 			writeLog(oss.str(), SERVER_EVENTS);
 			this->clientDisconnect(it->first);
 		}
