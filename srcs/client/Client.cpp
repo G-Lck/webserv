@@ -45,6 +45,11 @@ const HttpRequest&	Client::getRequest()	const
 	return (this->_request);
 }
 
+const std::deque<std::string>&	Client::getResponseQueue() const
+{
+	return (this->_response_queue);
+}
+
 // ------- Member variable manipulation --------
 
 void	Client::appendToReadBuffer(const char* data, size_t len)

@@ -1,12 +1,12 @@
-#include "../../includes/Ahandler.hpp"
+#include "../../includes/Handler.hpp"
 
-AHandler::AHandler() {}
+Handler::Handler() {}
 
-AHandler::AHandler(Client client, ServerConfig virtual_server): _client(client), _my_virtual_server(virtual_server) {}
+Handler::Handler(Client client, const std::vector<ServerConfig> &virtual_servers): _client(client), _virtual_servers(virtual_servers) {}
 
-AHandler::AHandler(const AHandler& other) { *this = other; }
+Handler::Handler(const Handler& other) { *this = other; }
 
-AHandler& AHandler::operator=(const AHandler& other) {
+Handler& Handler::operator=(const Handler& other) {
 	if (this != &other)
 	{
 		this->_client = other._client;
@@ -21,13 +21,13 @@ AHandler& AHandler::operator=(const AHandler& other) {
 	return *this;
 }
 
-AHandler::~AHandler() {}
+Handler::~Handler() {}
 
 /// @brief findServer will try to match the server name, if given, by the first virtual server with
 /// this name. If no name or not found we fall back on the first server with default_server as name.
 /// If no default_server is found, we take the first server in the list. If no server is configured
 /// we throw a 500 error (shouldn't happen if the config is valid)
-void	AHandler::findServer()
+void	Handler::findServer()
 {
 	std::string name = "default_server";
 	std::map<std::string, std::string> headers = this->_http_request.getHeaders();
@@ -75,7 +75,7 @@ void	AHandler::findServer()
 
 /// @brief find the location with the longest path inside all location of the virtual server.
 /// if not found, throw a 404 error.
-void	AHandler::findLocation()
+void	Handler::findLocation()
 {
 	if (this->_my_virtual_server.getLocations().empty())
 		throw HttpException(500, "No locations configured for this virtual server");
@@ -99,14 +99,14 @@ void	AHandler::findLocation()
 }
 
 /// @brief check if this location has a redirection and throw it.
-void	AHandler::checkRedirection()
+void	Handler::checkRedirection()
 {
 	if (this->_location.getReturnCode() != 0)
 		throw HttpException(this->_location.getReturnCode(), this->_location.getReturnUrl());
 }
 
 /// @brief check if the method of the HttpRequest is allowed in this location.
-void	AHandler::checkMethod()
+void	Handler::checkMethod()
 {
 	const std::vector<std::string> &allowed_methods = this->_location.getAllowMethods();
 	if (std::find(allowed_methods.begin(), allowed_methods.end(), this->_method) == allowed_methods.end())
@@ -115,15 +115,23 @@ void	AHandler::checkMethod()
 
 /// @brief ../ is forbidden in order to avoid back attack. And because we don't need to do
 /// the regex for the path I think this is enough.
-void	AHandler::checkDotsPath()
+void	Handler::checkDotsPath()
 {
-	if (this->_path.find("..") != std::string::npos)
+	if (this->_http_request.getPath().find("..") != std::string::npos)
 		throw HttpException(418, "I'm a teapot");
 }
 
-void	AHandler::constructPath()
+void	Handler::constructPath()
 {
-	this->_path = "." + this->_location.getRoot();
+	this->_path = "." + this->_location.getRoot() + this->_http_request.getPath();
 }
-
-void	AHandler::run(){}
+///
+void	Handler::run()
+{
+	checkDotsPath();
+	findServer();
+	findLocation();
+	checkRedirection();
+	checkMethod();
+	constructPath();
+}

@@ -8,6 +8,7 @@
 #include "GlobalConfig.hpp"
 #include "Log.hpp"
 #include "utils.hpp"
+#include "Handler.hpp"
 
 class	AServer
 {

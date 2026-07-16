@@ -1,5 +1,5 @@
-#ifndef AHANDLER_HPP
-#define AHANDLER_HPP
+#ifndef Handler_HPP
+#define Handler_HPP
 
 #include "WebServ.hpp"
 #include "Client.hpp"
@@ -9,7 +9,7 @@
 #include "HttpRequest.hpp"
 #include "HttpException.hpp"
 
-class AHandler
+class Handler
 {
 	private:
 		Client						_client;
@@ -21,20 +21,20 @@ class AHandler
 		std::string					_method;
 		std::string					_path;
 
+		void	checkDotsPath();
 		void	findServer();
 		void	findLocation();
 		void	checkRedirection();
 		void	checkMethod();
-		void	checkDotsPath();
 		void	constructPath();
 
 	public:
-		AHandler();
-		AHandler(Client client, ServerConfig virtual_server);
-		AHandler(const AHandler& other);
-		AHandler& operator=(const AHandler& other);
-		~AHandler();
-		void	run(); // should be virtual
+		Handler();
+		Handler(Client client, const std::vector<ServerConfig> &virtual_servers);
+		Handler(const Handler& other);
+		Handler& operator=(const Handler& other);
+		~Handler();
+		void	run();
 };
 
 #endif

@@ -31,6 +31,7 @@ class Client
 	const char*							getWriteData() 		const;
 	size_t								getWriteRemaining() const;
 	const HttpRequest&					getRequest()		const;
+	const std::deque<std::string>&		getResponseQueue() const;
 	time_t								getLastActivity()	const;
 	int									getFd()				const;
 	std::pair<std::string, std::string>	getHostPort() 		const;

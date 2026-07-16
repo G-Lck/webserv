@@ -237,18 +237,32 @@ void    AServer::readRequest(int fd)
 		//+ Otherwise we append to buffer until the request is finished
 		Client* c = it->second;
 		c->appendToReadBuffer(buffer, bytes_read);
-		while (c->parseBufferedRequest() == true)
+
+		try
 		{
-			std::stringstream ss;
-			ss << (*c) << " -> Complete request recieved";
-			writeLog(ss.str(), SERVER_EVENTS); //+ Log request
-	
-			this->handleCompleteRequest(fd);
-			if (!c->getKeepAlive())
+			while (c->parseBufferedRequest() == true)
 			{
-				this->clientDisconnect(fd);
-				break;
+				std::stringstream ss;
+				ss << (*c) << " -> Complete request recieved";
+				writeLog(ss.str(), SERVER_EVENTS); //+ Log request
+		
+				this->handleCompleteRequest(fd);
+				const std::deque<std::string> &responses = c->getResponseQueue();
+				for (size_t i = 0; i < responses.size(); i++)
+					std::cout << responses[i] << std::endl;
+				if (!c->getKeepAlive())
+				{
+					this->clientDisconnect(fd);
+					break;
+				}
 			}
+		}
+		catch (const HttpException& e)
+		{
+			const std::deque<std::string> &responses = c->getResponseQueue();
+			for (size_t i = 0; i < responses.size(); i++)
+				std::cout << responses[i] << std::endl;
+			std::cout << e.getCode() << " " <<e.what() << std::endl;
 		}
 	}
 }
@@ -290,7 +304,15 @@ void	AServer::handleCompleteRequest(int fd)
 	}
 	Client* c = it->second;
 	// Build the HTTP response for this request.
+	t_virtualServer::iterator route_it = this->_virtualServers.find(c->getHostPort());
+	if (route_it == this->_virtualServers.end())
+	{
+		writeLog("Request: no virtual server for client route", ERROR_INFO);
+		return ;
+	}
 
+	Handler	myhandler(*c, route_it->second);
+	myhandler.run();
 	std::string single_response = process_and_build_response(c);
 
 	// Clean up: erase the processed request from the read buffer, resets state for the next request.
