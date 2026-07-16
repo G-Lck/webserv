@@ -276,6 +276,7 @@ void	AServer::handleCompleteRequest(int fd)
 	}
 	Client* c = it->second;
 	// Build the HTTP response for this request.
+
 	std::string single_response = process_and_build_response(c);
 
 	// Clean up: erase the processed request from the read buffer, resets state for the next request.
