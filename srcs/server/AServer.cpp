@@ -276,16 +276,7 @@ void	AServer::handleCompleteRequest(int fd)
 	}
 	Client* c = it->second;
 	// Build the HTTP response for this request.
-<<<<<<< Updated upstream
-=======
-	extract_request(c);
-	if (cgi)
-		CGIHandler handler(c, this->_virtualServer, this->_fd_to_route);
-	else
-		staticHandler handler;
-	handler.run();
 
->>>>>>> Stashed changes
 	std::string single_response = process_and_build_response(c);
 
 	// Clean up: erase the processed request from the read buffer, resets state for the next request.

@@ -6,6 +6,25 @@ Client::Client() : _fd(-1), _write_offset(0), _last_activity(0) { std::cout << "
 
 Client::Client( int fd, std::pair<std::string, std::string>	host_port) : _fd(fd), _host_port(host_port), _write_offset(0), _last_activity(0){ };
 
+Client::Client(const Client& other){ *this = other; }
+
+Client& Client::operator=(const Client& other)
+{
+	if (this != &other)
+	{
+		this->_fd = other._fd;
+		this->_host_port = other._host_port;
+		this->_read_buffer = other._read_buffer;
+		this->_write_buffer = other._write_buffer;
+		this->_write_offset = other._write_offset;
+		this->_request = other._request;
+		this->_response_queue = other._response_queue;
+		this->_last_activity = other._last_activity;
+		this->_keep_alive = other._keep_alive;
+	}
+	return *this;
+}
+
 Client::~Client() { }
 
 // ------- Getters --------

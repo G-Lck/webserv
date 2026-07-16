@@ -13,6 +13,7 @@ SRC = 	main.cpp \
 		srcs/parse/ParseConfig.cpp \
 		srcs/requests/HttpException.cpp \
 		srcs/requests/HttpRequest.cpp \
+		srcs/requests/HttpResponse.cpp \
 		srcs/server/AServer.cpp \
 		srcs/server/EpollServer.cpp \
 		srcs/server/PollServer.cpp \
