@@ -25,6 +25,7 @@ enum LogFiles
 	SERVER_EVENTS,
 	ERROR_INFO,
 	ERROR_WARNING,
+	STATUS_CODE,
 };
 
 // --- C++ Standard Core ---

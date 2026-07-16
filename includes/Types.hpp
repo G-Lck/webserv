@@ -1,8 +1,6 @@
 #ifndef TYPES_HPP
 #define TYPES_HPP
 
-#include "WebServ.hpp"
-
 class ServerConfig;
 
 /// @brief Maps a physical Host:Port combo to its list of ServerConfigs (Virtual Servers)
