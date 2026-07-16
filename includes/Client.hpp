@@ -27,11 +27,13 @@ class Client
 		Client(int fd, std::pair<std::string, std::string>	host_port);
 		~Client();
 
-	const std::string&	getReadBuffer()		const;
-	const char*			getWriteData() 		const;
-	size_t				getWriteRemaining() const;
-	const HttpRequest&	getRequest()		const;
-	time_t				getLastActivity()	const;
+	const std::string&					getReadBuffer()		const;
+	const char*							getWriteData() 		const;
+	size_t								getWriteRemaining() const;
+	const HttpRequest&					getRequest()		const;
+	time_t								getLastActivity()	const;
+	int									getFd()				const;
+	std::pair<std::string, std::string>	getHostPort() 		const;
 
 	void				appendToReadBuffer(const char* data, size_t len);
 	void				appendToWriteBuffer(const std::string& data);
@@ -55,5 +57,7 @@ class Client
 	void				wantsKeepAlive();
 	void				updateTime();
 };
+
+std::ostream &operator<<( std::ostream &out, Client const &c );
 
 #endif

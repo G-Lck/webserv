@@ -13,3 +13,11 @@ std::string process_and_build_response(Client* client)
 // try catch the selected case
 // try recieves the ok response
 // catch recieves the status code error
+
+/*
+if (cgi)
+	CGIHandler handler(c, this->_virtualServer, this->_fd_to_route);
+else
+	staticHandler handler;
+handler.run();
+*/

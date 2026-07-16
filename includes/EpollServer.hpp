@@ -34,6 +34,10 @@ class	EpollServer: public AServer
 				runtimeEpollServerException(const char* message);
 		};
 
+		//+ Getters
+		const Client	&getClient(int fd) const;
+		const Socket	&getSocket(int fd) const;
+
 		//+ --- Configuration and launching
 		void	initMultiplexer(void);
 		void	addSocketsToMultiplexer(void);

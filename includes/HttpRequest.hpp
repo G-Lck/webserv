@@ -29,9 +29,18 @@ class HttpRequest {
 		~HttpRequest();
 		bool parse(const std::string& raw);
 
+		// Getters
 		size_t								getConsumedBytes() const;
 		std::map<std::string, std::string>	getHeaders() const;
+		const std::string&					getMethod() const;
+		const std::string&					getPath() const;
+		const std::string&					getQueryString() const;
+		const std::string&					getVersion() const;
+		const std::string&					getBody() const;
+	
 		void								printRequest() const;
 };
+
+std::ostream &operator<<(std::ostream &out, HttpRequest const &req );
 
 #endif
