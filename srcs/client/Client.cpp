@@ -4,7 +4,7 @@
 
 Client::Client() : _fd(-1), _write_offset(0), _last_activity(0) { std::cout << "Client default constructor called" << std::endl; }
 
-Client::Client( int fd ) : _fd(fd), _write_offset(0), _last_activity(0) { };
+Client::Client( int fd, std::pair<std::string, std::string>	host_port) : _fd(fd), _host_port(host_port), _write_offset(0), _last_activity(0){ };
 
 Client::~Client() { }
 

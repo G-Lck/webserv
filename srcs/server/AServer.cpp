@@ -164,11 +164,9 @@ bool	AServer::addNewClient(int curr_socket_fd)
 		close(fd_client);
 		return (false);
 	}
-	// Pair the Socket with the Client, store that data to _fd_to_route (only for us as info)
-	this->_fd_to_route[fd_client] = this->_fd_to_route[curr_socket_fd];
 
 	// Create the new client with the fd given by accept()
-	Client *newClient = new Client(fd_client);
+	Client *newClient = new Client(fd_client, _fd_to_route[curr_socket_fd]);
 
 	// Set the time for timeout
 	newClient->updateTime();
@@ -179,9 +177,7 @@ bool	AServer::addNewClient(int curr_socket_fd)
 	// Try to add this fd to epoll
 	if(!addClientToMultiplexer(fd_client))
 	{
-		this->_clients.erase(fd_client);
 		delete newClient;
-		this->_fd_to_route.erase(fd_client);
 		close(fd_client);
 		return (false);
 	}
@@ -258,7 +254,6 @@ void	AServer::clientDisconnect(int fd)
 		std::string err = "Client already disconnected: ";
 		writeLog(err.append(strerror(errno)), ERROR_INFO);
 	}
-	this->_fd_to_route.erase(fd);
 
 	std::map<int, Client*>::iterator it = this->_clients.find(fd);
 	if (it != this->_clients.end())

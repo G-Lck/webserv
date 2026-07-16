@@ -9,21 +9,22 @@ class HttpRequest;
 class Client
 {
 	private:
-		int						_fd;
-		std::string				_read_buffer;
-		std::string				_write_buffer;
-		size_t					_write_offset;
-		HttpRequest				_request;
-		std::deque<std::string> _response_queue;
-		time_t 					_last_activity;
-		bool					_keep_alive;
+		int									_fd;
+		std::pair<std::string, std::string>	_host_port;
+		std::string							_read_buffer;
+		std::string							_write_buffer;
+		size_t								_write_offset;
+		HttpRequest							_request;
+		std::deque<std::string>				_response_queue;
+		time_t 								_last_activity;
+		bool								_keep_alive;
 
 		Client(const Client& other);
 		Client& operator=(const Client& other);
 	public:
 
 		Client();
-		Client( int fd );
+		Client(int fd, std::pair<std::string, std::string>	host_port);
 		~Client();
 
 	const std::string&	getReadBuffer()		const;
