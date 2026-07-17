@@ -2,7 +2,10 @@
 
 Handler::Handler() {}
 
-Handler::Handler(Client client, const std::vector<ServerConfig> &virtual_servers): _client(client), _virtual_servers(virtual_servers) {}
+Handler::Handler(Client client, const std::vector<ServerConfig> &virtual_servers): _client(client), _virtual_servers(virtual_servers)
+{
+	this->_http_request = this->_client.getRequest();
+}
 
 Handler::Handler(const Handler& other) { *this = other; }
 
@@ -85,7 +88,7 @@ void	Handler::findLocation()
 	for (size_t i = 0; i < locations.size(); i++)
 	{
 		const std::string &location_path = locations[i].getPath();
-		if (this->_path.compare(0, location_path.length(), location_path) == 0)
+		if (this->_path.compare(0, location_path.length(), location_path) != 0)
 		{
 			if (location_path.length() > longest_match_length)
 			{
