@@ -169,7 +169,6 @@ bool HttpRequest::parse(const std::string& raw)
 	else if (_headers.count("Content-Length"))
 		return parseBody(raw.substr(header_end + 4));
 
-	std::cout << "http request parser over" << std::endl;
 	return true;
 }
 

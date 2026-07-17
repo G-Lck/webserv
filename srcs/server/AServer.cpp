@@ -254,6 +254,9 @@ void    AServer::readRequest(int fd)
 				std::stringstream ss;
 				ss << (*c) << " -> Complete request recieved";
 				writeLog(ss.str(), SERVER_EVENTS); //+ Log request
+				std::stringstream sss;
+				sss << c->getRequest();
+				writeLog(sss.str(), ACCESS);
 		
 				this->handleCompleteRequest(fd);
 				const std::deque<std::string> &responses = c->getResponseQueue();
@@ -312,6 +315,7 @@ void	AServer::handleCompleteRequest(int fd)
 		return ;
 	}
 	Client* c = it->second;
+	
 	// Build the HTTP response for this request.
 	t_virtualServer::iterator route_it = this->_virtualServers.find(c->getHostPort());
 	if (route_it == this->_virtualServers.end())
@@ -319,7 +323,6 @@ void	AServer::handleCompleteRequest(int fd)
 		writeLog("Request: no virtual server for client route", ERROR_INFO);
 		return ;
 	}
-
 	Handler	myhandler(*c, route_it->second);
 	myhandler.run();
 	std::string single_response = process_and_build_response(c);
