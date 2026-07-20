@@ -62,6 +62,8 @@ enum LogFiles
 #include <sys/stat.h>	// stat() (to check if an HTML file exists before serving)
 #include <unistd.h>
 #include <dirent.h>		// opendir(), readdir(), closedir() (for autoindex)
+#include <sys/types.h>
+#include <sys/wait.h>
 
 // --- POSIX signals ---
 #include <signal.h>

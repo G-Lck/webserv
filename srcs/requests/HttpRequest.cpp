@@ -100,11 +100,17 @@ void	HttpRequest::parseHeaders(const std::string& raw)
 /// @return true when body_raw is bigger than content_length and false otherwise
 bool HttpRequest::parseBody(const std::string& body_raw)
 {
-	size_t	body_len = atoi(_headers["Content-Length"].c_str());
+	std::map<std::string, std::string>::const_iterator it = this->_headers.find("Content-Length");
+	if (it == this->_headers.end())
+		throw HttpException(411, "The request did not specify the length of its content");
+
+	size_t	body_len = std::atoi(it->second.c_str());
 	
 	if (body_len > MAX_BODY) // should be something form config file
 		throw HttpException(413, "Content Too Large");
-	
+	if (body_len < 0)
+		throw HttpException(413, "Negative body size");
+
 	if (body_raw.size() < body_len)
 		return false;
 	this-> _body = body_raw.substr(0, body_len);
@@ -216,7 +222,6 @@ const std::string& HttpRequest::getVersion() const
 {
 	return _version;
 }
-
 
 const std::string& HttpRequest::getBody() const
 {

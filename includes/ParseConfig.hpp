@@ -45,6 +45,9 @@ class ParseConfig
 		//+ ---- Validate dirs ----
 		void		validatePaths( GlobalConfig &config ) const;
 
+		//+ ---- Check for default ----
+		void		applyDefaults(GlobalConfig &config);
+
 		//+ ---- Parse Helpers ----
 		int     getGlobalType(std::string& token);
 		int     getServerType(std::string& token);
@@ -94,5 +97,7 @@ class ParseConfig
 				ParseErrException(const char* message);
 		};
 };
+
+bool		isValidFile(const std::string& path, int flag);
 
 #endif

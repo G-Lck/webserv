@@ -11,18 +11,16 @@
 
 class Handler
 {
-	private:
-		Client						_client;
+	protected:
+		Client*						_client;
 		HttpRequest					_http_request;
-		HttpResponse*				_http_response;
-		std::vector<ServerConfig>	_virtual_servers;
 		ServerConfig				_my_virtual_server;
 		LocationConfig				_location;
 		std::string					_method;
 		std::string					_path;
 
 		void	checkDotsPath();
-		void	findServer();
+		void	findServer(const std::vector<ServerConfig> &virtual_servers);
 		void	findLocation();
 		void	checkRedirection();
 		void	checkMethod();
@@ -30,11 +28,23 @@ class Handler
 
 	public:
 		Handler();
-		Handler(Client client, const std::vector<ServerConfig> &virtual_servers);
+		Handler(Client* client);
 		Handler(const Handler& other);
 		Handler& operator=(const Handler& other);
 		~Handler();
-		void	run();
+		
+		//+ ------ MAIN FUNCTIONALLITY ------
+		void	initHandler(const std::vector<ServerConfig> &virtual_servers);
+		bool	isCGI();
+		void	executeStatic();
+
+		//+ ------ GETTERS ------
+		Client*					getClient() const;
+		const HttpRequest&		getHttpRequest() const;
+		const ServerConfig&		getVirtualServer() const;
+		const LocationConfig&	getLocation() const;
+		const std::string&		getMethod() const;
+		const std::string&		getPath() const;
 };
 
 #endif

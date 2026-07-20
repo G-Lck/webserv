@@ -30,6 +30,7 @@ class GlobalConfig
 		const std::map<int, std::string>&	getErrorPages( void ) const;
 		bool								getAutoindex( void ) const;
 		int									getClientMaxBodySize( void ) const;
+		ServerConfig&						getServersAt(int index);
 		
 		//+ --- Setters ---
 		void	addServer( ServerConfig newServ );

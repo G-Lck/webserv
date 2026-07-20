@@ -78,6 +78,9 @@ void LocationConfig::setReturn(int code, const std::string &url) { _return_code 
 /// @brief Sets the upload directory path
 void LocationConfig::setUploadPath(const std::string &upload_path) { _upload_path = upload_path; }
 
+/// @brief Sets the error pages
+void LocationConfig::setErrorPages(const std::map<int, std::string> &error_pages) { this->_error_pages = error_pages; }
+
 // ------ Getters ------
 
 /// @brief Returns the root directory

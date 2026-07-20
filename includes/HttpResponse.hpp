@@ -17,11 +17,11 @@ class HttpResponse
 		HttpResponse& operator=(const HttpResponse& other);
 		~HttpResponse();
 
-		int								getStatusCode() const;
-		const std::string&				getStatusMessage() const;
+		int									getStatusCode() const;
+		const std::string&					getStatusMessage() const;
 		std::map<std::string, std::string>	getHeaders() const;
-		const std::string&				getBody() const;
-		bool							getConnection() const;
+		const std::string&					getBody() const;
+		bool								getConnection() const;
 };
 
 std::ostream &operator<<(std::ostream &out, HttpResponse const &res);

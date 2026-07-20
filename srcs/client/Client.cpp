@@ -182,13 +182,12 @@ int	Client::getFd()	const { return this->_fd; }
 
 std::pair<std::string, std::string>	Client::getHostPort() const { return this->_host_port; }
 
-
 std::ostream &operator<<( std::ostream &out, Client const &c )
 {
 	time_t last_act = c.getLastActivity();
 	char *t = ctime(&last_act);
 	t[strlen(t) - 1] = '\0'; //+ remove the new line
 
-	out << "Client [" << c.getFd() << "] " << c.getHostPort().first << c.getHostPort().second << " Last activity: " << t;
+	out << "Client [" << c.getFd() << "] " << c.getHostPort().first << ":" << c.getHostPort().second << " Last activity: " << t;
 	return out;
 }

@@ -1,10 +1,12 @@
 #include "../../includes/Handler.hpp"
 
+// ---------- ORTHODOX ----------
+
 Handler::Handler() {}
 
-Handler::Handler(Client client, const std::vector<ServerConfig> &virtual_servers): _client(client), _virtual_servers(virtual_servers)
+Handler::Handler(Client* client): _client(client)
 {
-	this->_http_request = this->_client.getRequest();
+	this->_http_request = this->_client->getRequest();
 }
 
 Handler::Handler(const Handler& other) { *this = other; }
@@ -14,8 +16,6 @@ Handler& Handler::operator=(const Handler& other) {
 	{
 		this->_client = other._client;
 		this->_http_request = other._http_request;
-		this->_http_response = other._http_response;
-		this->_virtual_servers = other._virtual_servers;
 		this->_my_virtual_server = other._my_virtual_server;
 		this->_location = other._location;
 		this->_method = other._method;
@@ -26,11 +26,31 @@ Handler& Handler::operator=(const Handler& other) {
 
 Handler::~Handler() {}
 
+// ---------- DEFINE TYPE ----------
+
+/// @brief	Function that compares the _path set on the Handler during setup and the 
+///			cgi_path set in the LocationConfig for the running virtual sever.
+/// @return If the location is not empty, and it matches with the one in location config, it will
+///			return true, otherwise returns false.
+bool	Handler::isCGI()
+{
+    const std::string &cgi_path = this->_location.getCgiHandler().first;
+    if (cgi_path.empty())
+        return false;
+    if (this->_path.length() < cgi_path.length())
+        return false;
+	if (this->_path.compare(this->_path.length() - cgi_path.length(), cgi_path.length(), cgi_path) == 0)
+    	return true;
+	return (false);
+}
+
+// ---------- SETUP FUNCTIONS ----------
+
 /// @brief findServer will try to match the server name, if given, by the first virtual server with
 /// this name. If no name or not found we fall back on the first server with default_server as name.
 /// If no default_server is found, we take the first server in the list. If no server is configured
 /// we throw a 500 error (shouldn't happen if the config is valid)
-void	Handler::findServer()
+void	Handler::findServer(const std::vector<ServerConfig> &virtual_servers)
 {
 	std::string name = "default_server";
 	std::map<std::string, std::string> headers = this->_http_request.getHeaders();
@@ -44,34 +64,37 @@ void	Handler::findServer()
 			name = name.substr(0, colon_pos);
 	}
 
-	for (size_t i = 0; i < this->_virtual_servers.size(); i++)
+	//+ Find matching server by name, set and return
+	for (size_t i = 0; i < virtual_servers.size(); i++)
 	{
-		const std::vector<std::string> &server_names = this->_virtual_servers[i].getServerName();
+		const std::vector<std::string> &server_names = virtual_servers[i].getServerName();
 		for (size_t j = 0; j < server_names.size(); j++)
 		{
 			if (server_names[j] == name)
 			{
-				this->_my_virtual_server = this->_virtual_servers[i];
+				this->_my_virtual_server = virtual_servers[i];
 				return ;
 			}
 		}
 	}
 
-	for (size_t i = 0; i < this->_virtual_servers.size(); i++)
+	//+ Find matching server by default_server if no match with server name, set and return
+	for (size_t i = 0; i < virtual_servers.size(); i++)
 	{
-		const std::vector<std::string> &server_names = this->_virtual_servers[i].getServerName();
+		const std::vector<std::string> &server_names = virtual_servers[i].getServerName();
 		for (size_t j = 0; j < server_names.size(); j++)
 		{
 			if (server_names[j] == "default_server")
 			{
-				this->_my_virtual_server = this->_virtual_servers[i];
+				this->_my_virtual_server = virtual_servers[i];
 				return ;
 			}
 		}
 	}
 
-	if (!this->_virtual_servers.empty())
-		this->_my_virtual_server = this->_virtual_servers[0];
+	//+ If no match was found set default or thrown if there are no servers
+	if (!virtual_servers.empty())
+		this->_my_virtual_server = virtual_servers[0];
 	else
 		throw HttpException(500, "No virtual servers configured");
 }
@@ -88,7 +111,7 @@ void	Handler::findLocation()
 	for (size_t i = 0; i < locations.size(); i++)
 	{
 		const std::string &location_path = locations[i].getPath();
-		if (this->_path.compare(0, location_path.length(), location_path) != 0)
+		if (this->_http_request.getPath().compare(0, location_path.length(), location_path) == 0)
 		{
 			if (location_path.length() > longest_match_length)
 			{
@@ -111,6 +134,7 @@ void	Handler::checkRedirection()
 /// @brief check if the method of the HttpRequest is allowed in this location.
 void	Handler::checkMethod()
 {
+	this->_method = this->_http_request.getMethod();
 	const std::vector<std::string> &allowed_methods = this->_location.getAllowMethods();
 	if (std::find(allowed_methods.begin(), allowed_methods.end(), this->_method) == allowed_methods.end())
 		throw HttpException(405, "Method Not Allowed");
@@ -129,12 +153,26 @@ void	Handler::constructPath()
 	this->_path = "." + this->_location.getRoot() + this->_http_request.getPath();
 }
 ///
-void	Handler::run()
+void	Handler::initHandler(const std::vector<ServerConfig> &virtual_servers)
 {
 	checkDotsPath();
-	findServer();
+	findServer(virtual_servers);
 	findLocation();
 	checkRedirection();
 	checkMethod();
 	constructPath();
 }
+
+// ---------- GETTERS ----------
+
+Client* Handler::getClient() const { return this->_client; }
+
+const HttpRequest& Handler::getHttpRequest() const { return this->_http_request; }
+
+const ServerConfig& Handler::getVirtualServer() const { return this->_my_virtual_server; }
+
+const LocationConfig& Handler::getLocation() const { return this->_location; }
+
+const std::string& Handler::getMethod() const { return this->_method; }
+
+const std::string& Handler::getPath() const { return this->_path; }

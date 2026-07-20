@@ -4,7 +4,6 @@
 
 static bool isValidDirectory(const std::string& path);
 static bool isWritableDirectory(const std::string& path);
-static bool isValidFile(const std::string& path, int flag);
 static bool isValidConfigFile(const std::string& path);
 
 // ------ Orthodox ------
@@ -108,6 +107,7 @@ void ParseConfig::parse(GlobalConfig &config)
 	if (config.serverCount() == 0)
 		throw ParseErrException("Error: no servers in config file");
 	validatePaths(config);
+	applyDefaults(config);
 }
 
 
@@ -488,41 +488,41 @@ void	ParseConfig::parseMaxBody(std::vector<std::string>::iterator &it, T &config
 template <typename T>
 void    ParseConfig::parseCGI(std::vector<std::string>::iterator &it, T &config)
 {
-    it++; // Skip cgi_handler
-    if (it == this->_tokens.end() || *it == ";" || *it == "}") //+ Check empty extension
-        throw ParseErrException("Error\nEmpty cgi directive.");
-	
-    if ((*it)[0] != '.') //+ Check extension to start with .
-        throw ParseErrException("Error\nCGI extension must start with '.'");
-    std::string ext = *it;
+	it++; // Skip cgi_handler
+	if (it == this->_tokens.end() || *it == ";" || *it == "}") //+ Check empty extension
+		throw ParseErrException("Error\nEmpty cgi directive.");
 
-    it++; // Go to path
+	if ((*it)[0] != '.') //+ Check extension to start with .
+		throw ParseErrException("Error\nCGI extension must start with '.'");
+	std::string ext = *it;
 
-    if (it == this->_tokens.end() || *it == ";" || *it == "}") //+ Check empty path
-        throw ParseErrException("Error\nMissing cgi path.");
+	it++; // Go to path
 
-    if ((*it)[0] != '/')	//+ Check valid dir
+	if (it == this->_tokens.end() || *it == ";" || *it == "}") //+ Check empty path
+		throw ParseErrException("Error\nMissing cgi path.");
+
+	if ((*it)[0] != '/')	//+ Check valid dir
 	{
 		throw ParseErrException("Error\nCGI path must be absolute.");
 	}
 
 	std::string path = *it;
 
-    if (!isValidFile(path, X_OK)) //+ Check interpreter exists and is executable
+	if (!isValidFile(path, X_OK)) //+ Check interpreter exists and is executable
 	{
-    	throw ParseErrException("Error\nCGI interpreter path invalid or not executable.");
+		throw ParseErrException("Error\nCGI interpreter path invalid or not executable.");
 	}
 
 	it++;
-    if (it == this->_tokens.end() || *it == "}") //+ Find semicolon or end
-        throw ParseErrException("Error\nMissing semicolon after cgi.");
-    if (*it != ";")
-        throw ParseErrException("Error\nUnexpected token after cgi.");
+	if (it == this->_tokens.end() || *it == "}") //+ Find semicolon or end
+		throw ParseErrException("Error\nMissing semicolon after cgi.");
+	if (*it != ";")
+		throw ParseErrException("Error\nUnexpected token after cgi.");
 
-    if (!config.getCgiHandler().first.empty() && !config.getCgiHandler().second.empty())
-        throw ParseErrException("Error\nMore than one cgi directive.");
-    config.setCgiHandler(std::make_pair(ext, path));
-    it++;
+	if (!config.getCgiHandler().first.empty() && !config.getCgiHandler().second.empty())
+		throw ParseErrException("Error\nMore than one cgi directive.");
+	config.setCgiHandler(std::make_pair(ext, path));
+	it++;
 }
 
 // --------- SERVER CASES ---------
@@ -680,16 +680,16 @@ static bool isWritableDirectory(const std::string& path)
 /// @brief Checks if is that file is executable (for the cgi)
 /// @param path the file to validate
 /// @param flag X_OK for checking if executable (cgi) and R_OK readable (error pages)
-static bool isValidFile(const std::string& path, int flag)
+bool isValidFile(const std::string& path, int flag)
 {
-    struct stat s;
-    if (stat(path.c_str(), &s) != 0)
-        return false;
-    if (!S_ISREG(s.st_mode))
-        return false;
-    if (access(path.c_str(), flag) != 0)
-        return false;
-    return true;
+	struct stat s;
+	if (stat(path.c_str(), &s) != 0)
+		return false;		// doesn't exist
+	if (!S_ISREG(s.st_mode))
+		return false;		// check for a file, not a dir
+	if (access(path.c_str(), flag) != 0)
+		return false;		// Check for access permit
+	return true;
 }
 
 static bool isValidConfigFile(const std::string& path)
@@ -796,6 +796,68 @@ void	ParseConfig::validatePaths( GlobalConfig &config ) const
 					throw ParseErrException("Error\nInvalid upload_path directory.");
 				if (!isWritableDirectory("." + it->getUploadPath()))
 					throw ParseErrException("Error\nNon-writable upload_path directory.");
+			}
+		}
+	}
+}
+
+// --------- FILE VALIDATION ---------
+
+/// @brief	This function checks at the end of the parsing if any directive that must be filled is empty
+///			In any case, we will them by cascading from parent to child.
+///			Error pages are append the same way
+void ParseConfig::applyDefaults(GlobalConfig &config)
+{
+	//+ Check for empty directives in  server in case need to set to default by cascade
+	for (size_t i = 0; i < config.serverCount(); i++)
+	{
+		ServerConfig &s = config.getServersAt(i);
+
+		if (s.getRoot().empty())
+			s.setRoot(config.getRoot());
+		if (s.getIndex().empty())
+			s.setIndex(config.getIndex());
+		if (s.getClientMaxBodySize() == 0)
+			s.setClientMaxBodySize(config.getClientMaxBodySize());
+
+		//+ Append global error pages into server
+		const std::map<int, std::string>& globalPages = config.getErrorPages();
+		for (std::map<int, std::string>::const_iterator ep = globalPages.begin(); ep != globalPages.end(); ++ep)
+		{
+			if (s.getErrorPage().find(ep->first) == s.getErrorPage().end())
+				s.addErrorPage(ep->first, ep->second);
+		}
+
+		//+ Check for empty directives in  location in case need to set to default by cascade
+		std::vector<LocationConfig> &locations = s.getLocationsRef();
+		for (size_t j = 0; j < locations.size(); j++)
+		{
+			LocationConfig &l = locations[j];
+
+			if (l.getRoot().empty())
+				l.setRoot(s.getRoot());
+			if (l.getIndex().empty())
+				l.setIndex(s.getIndex());
+			if (l.getClientMaxBodySize() == 0)
+				l.setClientMaxBodySize(s.getClientMaxBodySize());
+
+			//+ Append server error pages into location
+			const std::map<int, std::string>& parentPages = s.getErrorPage();
+			for (std::map<int, std::string>::const_iterator ep = parentPages.begin(); ep != parentPages.end(); ++ep)
+			{
+				if (l.getErrorPages().find(ep->first) == l.getErrorPages().end())
+					l.addErrorPage(ep->first, ep->second);
+			}
+
+			if (l.getCgiHandler().first.empty())
+				l.setCgiHandler(s.getCgiHandler());
+			if (l.getAllowMethods().empty())
+			{
+				std::vector<std::string> all;
+				all.push_back("GET");
+				all.push_back("POST");
+				all.push_back("DELETE");
+				l.setAllowMethods(all);
 			}
 		}
 	}

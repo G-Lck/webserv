@@ -25,6 +25,7 @@ AServer::runtimeAServerException::runtimeAServerException(const char* message)
 ///				This stores this data: Host:Port combo and a vector to all ServerConfig
 void	AServer::configAServer(GlobalConfig &config)
 {
+	this->_global = &config;
 	t_port_host	 used_ports;
 	for (int i = 0; i < (int)config.serverCount(); i++)
 	{
@@ -184,13 +185,13 @@ bool	AServer::addNewClient(int curr_socket_fd)
 		return (false);
 	}
 
-	// Create the new client with the fd given by accept()
+	// Create the new client with the fd given by accept() 
 	Client *newClient = new Client(fd_client, _fd_to_route[curr_socket_fd]);
 
-	// Set the time for timeout
+	// Set the time for timeout 
 	newClient->updateTime();
 
-	// Insert the client in the map fd:Client
+	// Insert the client in the map fd:Client 
 	this->_clients.insert(std::make_pair(fd_client, newClient));
 
 	// Try to add this fd to epoll
@@ -334,9 +335,30 @@ void	AServer::handleCompleteRequest(int fd)
 		writeLog("Request: no virtual server for client route", ERROR_INFO);
 		return ;
 	}
-	Handler	myhandler(*c, route_it->second);
-	myhandler.run();
-	std::string single_response = process_and_build_response(c);
+
+	Handler	handler(c);
+	try
+	{
+		handler.initHandler(route_it->second);
+	}
+	catch(const HttpException& e)
+	{
+		std::cerr << e.what() << '\n';
+	}
+
+	std::string single_response;
+	if (handler.isCGI())
+	{
+		// try to find it in the list of handlers for this client and if its open 
+		// if not creat a new one
+		// executeCGI
+	}
+	else
+	{
+		handler.executeStatic();
+		single_response = process_and_build_response(c);
+	}
+	
 
 	// Clean up: erase the processed request from the read buffer, resets state for the next request.
 	c->addResponseQueue(single_response);

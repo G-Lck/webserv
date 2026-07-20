@@ -17,6 +17,7 @@ class HttpRequest {
 		std::map<std::string, std::string>	_headers;
 		std::string							_body;
 		size_t								_consumed_bytes;
+		size_t								_global_max_body;
 
 		void	parseRequestLine(const std::string& line);
 		void	parseHeaders(const std::string& raw);

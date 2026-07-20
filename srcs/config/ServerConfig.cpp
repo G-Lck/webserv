@@ -66,6 +66,8 @@ int ServerConfig::getClientMaxBodySize( void ) const { return _client_max_body_s
 /// @brief Returns the cgi handler
 const std::pair<std::string, std::string> &ServerConfig::getCgiHandler( void ) const { return _cgi_handler; }
 
+/// @brief Returns the locations by reference
+std::vector<LocationConfig>& ServerConfig::getLocationsRef() { return this->_locations; }
 
 // ------- Setters -------
 
@@ -95,3 +97,9 @@ void ServerConfig::setClientMaxBodySize(int size) { _client_max_body_size = size
 
 /// @brief Sets the cgi handler
 void ServerConfig::setCgiHandler(const std::pair<std::string, std::string> &cgi_handler) { _cgi_handler = cgi_handler; }
+
+/// @brief Sets the Index
+void ServerConfig::setIndex(const std::vector<std::string> &index) { this->_index = index; }
+
+/// @brief Sets the ErrorPages
+void ServerConfig::setErrorPages(const std::map<int, std::string> &error_pages) { this->_error_pages = error_pages; }

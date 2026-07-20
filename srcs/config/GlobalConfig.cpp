@@ -2,7 +2,7 @@
 
 // ------ Orthodox ------
 
-GlobalConfig::GlobalConfig() : _autoindex(false), _client_max_body_size(0) {}
+GlobalConfig::GlobalConfig() : _autoindex(false), _client_max_body_size(MAX_BODY) {}
 
 GlobalConfig::GlobalConfig(const GlobalConfig& other) { (void)other; }
 
@@ -32,6 +32,9 @@ int GlobalConfig::getClientMaxBodySize(void) const { return (int)this->_client_m
 
 /// @brief Returns the amount of serves
 size_t	GlobalConfig::serverCount( void ) const { return (this->_servers.size()); }
+
+/// @brief Returns the Server by reference at index
+ServerConfig& GlobalConfig::getServersAt(int index) { return this->_servers[index]; }
 
 // ------ Setters ------
 

@@ -38,6 +38,7 @@ class ServerConfig {
 		const std::vector<LocationConfig>&          getLocations( void ) const;
 		int                                         getClientMaxBodySize( void ) const;
 		const std::pair<std::string, std::string>&  getCgiHandler( void ) const;
+		std::vector<LocationConfig>&				getLocationsRef();
 
 		//+ ---- Setters ----
 		void    addListen( const std::string &host, const std::string &port );
@@ -49,6 +50,8 @@ class ServerConfig {
 		void    addLocation( const LocationConfig &location );
 		void    setClientMaxBodySize( int size );
 		void    setCgiHandler( const std::pair<std::string, std::string> &cgi_handler );
+		void	setIndex( const std::vector<std::string> &index );
+		void	setErrorPages( const std::map<int, std::string> &error_pages );
 };
 
 #endif

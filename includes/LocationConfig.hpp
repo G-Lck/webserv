@@ -41,6 +41,7 @@ class LocationConfig {
 		void    setLimitExcept( const std::vector<std::string> &limit_except );
 		void    setReturn( int code, const std::string &url );
 		void	setUploadPath( const std::string &upload_path );
+		void	setErrorPages( const std::map<int, std::string> &error_pages );
 
 		//+ ---- Getters ----
 		const std::string&							getRoot( void ) const;

@@ -8,12 +8,15 @@
 #include "GlobalConfig.hpp"
 #include "utils.hpp"
 #include "Handler.hpp"
+#include "HandlerCGI.hpp"
 
 class	AServer
 {
 	protected:
+		GlobalConfig*						_global;
 		std::map<int, Socket*>				_sockets;
 		std::map<int, Client*>				_clients;
+		std::map<int, CgiHandler*>			_cgi_handlers;
 		t_virtualServer						_virtualServers;
 		t_fdRoute							_fd_to_route; // This is to give to the handler, to know in which socket the client is connected, to after know in which virtual server i have to go
 		
