@@ -13,7 +13,6 @@
 class	AServer
 {
 	protected:
-		GlobalConfig*						_global;
 		std::map<int, Socket*>				_sockets;
 		std::map<int, Client*>				_clients;
 		std::map<int, CgiHandler*>			_cgi_handlers;

@@ -2,8 +2,9 @@
 # define UTILS_HPP
 
 #include "WebServ.hpp"
-#include "Client.hpp"
 #include "GlobalConfig.hpp"
+
+class Client;
 
 std::string		process_and_build_response( Client *client );                     
 

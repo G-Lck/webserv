@@ -30,8 +30,11 @@ class CgiHandler : public Handler
 
 		//+ Setup
 		void	validateCgi();
-bool	validMethod();
-bool	validContentLength();
+		bool	validMethod();
+		bool	validContentLength();
+
+		void	setEnvVars();
+		void	openPipe();
 
 		//+ Execution
 		

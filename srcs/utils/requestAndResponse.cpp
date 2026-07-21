@@ -1,4 +1,5 @@
 #include "../../includes/utils.hpp"
+#include "../../includes/Client.hpp"
 
 std::string process_and_build_response(Client* client)
 {

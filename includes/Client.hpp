@@ -4,8 +4,6 @@
 #include "WebServ.hpp"
 #include "HttpRequest.hpp"
 
-class HttpRequest;
-
 class Client
 {
 	private:

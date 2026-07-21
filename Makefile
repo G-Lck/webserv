@@ -10,6 +10,7 @@ SRC = 	main.cpp \
 		srcs/config/ServerConfig.cpp \
 		srcs/config/LocationConfig.cpp \
 		srcs/handlers/Handler.cpp \
+		srcs/handlers/HandlerCGI.cpp \
 		srcs/parse/ParseConfig.cpp \
 		srcs/requests/HttpException.cpp \
 		srcs/requests/HttpRequest.cpp \

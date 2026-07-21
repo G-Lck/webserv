@@ -2,6 +2,7 @@
 #define HTTPEXCEPTION_HPP
 
 #include "WebServ.hpp"
+#include "utils.hpp"
 
 class HttpException: public std::exception
 {
@@ -16,6 +17,7 @@ class HttpException: public std::exception
 
 		int	getCode() const;
 		const char*	what() const throw();
+		std::string	getResponseStr();
 };
 
 #endif

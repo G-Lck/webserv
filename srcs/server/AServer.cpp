@@ -25,7 +25,6 @@ AServer::runtimeAServerException::runtimeAServerException(const char* message)
 ///				This stores this data: Host:Port combo and a vector to all ServerConfig
 void	AServer::configAServer(GlobalConfig &config)
 {
-	this->_global = &config;
 	t_port_host	 used_ports;
 	for (int i = 0; i < (int)config.serverCount(); i++)
 	{
@@ -352,10 +351,12 @@ void	AServer::handleCompleteRequest(int fd)
 		// try to find it in the list of handlers for this client and if its open 
 		// if not creat a new one
 		// executeCGI
+		CgiHandler* cgi = new CgiHandler(handler);
+		cgi->validateCgi();
 	}
 	else
 	{
-		handler.executeStatic();
+		//handler.executeStatic();
 		single_response = process_and_build_response(c);
 	}
 	

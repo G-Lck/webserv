@@ -34,7 +34,7 @@ CgiHandler::CgiHandler(Handler const &handler) : Handler(handler)
 	this->_writeOffset = 0;
 }
 
-// ---------- SETUP ----------
+// ---------- VALIDATE REQUEST ----------
 
 /// @brief	Fucntion to validate the request values before starting with the cgi
 ///			checks: isValidFile(), validMethod(), validContentLength()
@@ -60,10 +60,10 @@ bool	CgiHandler::validContentLength()
 	if (it == headers.end()) //+ Extra check if not found (we check that in the parser anyways)
 		throw HttpException(411, "The request did not specify the length of its content");
 
-	int content_length = std::atoi(it->second.c_str()); //+ Get the length set in the header
+	size_t content_length = std::atoi(it->second.c_str()); //+ Get the length set in the header
 
 	if (content_length != this->getHttpRequest().getBody().size()
-		|| content_length > this->getLocation().getClientMaxBodySize())
+		|| content_length > (size_t)this->getLocation().getClientMaxBodySize())
 		return false; //+ Check if size is not bigger than location or matches with the actual body
 	return (true);
 }
@@ -81,6 +81,18 @@ bool	CgiHandler::validMethod()
 		it++;
 	}
 	return (false);
+}
+
+// ---------- SETUP ----------
+
+void	CgiHandler::setEnvVars()
+{
+
+}
+
+void	CgiHandler::openPipe()
+{
+
 }
 
 // ---------- GETTERS ----------
