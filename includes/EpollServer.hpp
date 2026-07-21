@@ -24,6 +24,8 @@ class	EpollServer: public AServer
 		void	removeFdFromMultiplexer( int fd );
 		void	watchForRead( int fd );
 		void	watchForWrite( int fd );
+
+		void	handleCgiEvent(int fd, uint32_t epoll_event);
 	public:
 		EpollServer();
 		~EpollServer();

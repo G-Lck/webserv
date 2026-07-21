@@ -27,127 +27,59 @@ Client& Client::operator=(const Client& other)
 
 Client::~Client() { }
 
-// ------- Getters --------
+// ------- OVERLOAD --------
 
-const std::string&	Client::getReadBuffer()	const
+std::ostream &operator<<( std::ostream &out, Client const &c )
 {
-	return (this->_read_buffer);
+	time_t last_act = c.getLastActivity();
+	char *t = ctime(&last_act);
+	t[strlen(t) - 1] = '\0'; //+ remove the new line
+
+	out << "Client [" << c.getFd() << "] " << c.getHostPort().first << ":" << c.getHostPort().second << " Last activity: " << t;
+	return out;
 }
 
+// ------- GETTERS --------
 
-size_t Client::getWriteRemaining() const
-{
-	return _write_buffer.size() - _write_offset;
-}
+const std::string&	Client::getReadBuffer()	const { return (this->_read_buffer); }
 
-const HttpRequest&	Client::getRequest()	const
-{
-	return (this->_request);
-}
+size_t				Client::getWriteRemaining() const { return _write_buffer.size() - _write_offset; }
 
-const std::deque<std::string>&	Client::getResponseQueue() const
-{
-	return (this->_response_queue);
-}
+const HttpRequest&	Client::getRequest()	const { return (this->_request); }
 
-// ------- Member variable manipulation --------
+const char*			Client::getWriteData() const { return _write_buffer.data() + _write_offset; }
 
-void	Client::appendToReadBuffer(const char* data, size_t len)
-{
-	this->_read_buffer.append(data, len);
-}
+int					Client::getFd()	const { return this->_fd; }
 
-void Client::appendToWriteBuffer(const std::string& data)
-{
-    this->_write_buffer.append(data);
-}
+time_t				Client::getLastActivity() const { return (this->_last_activity); }
 
-void Client::eraseProcessedRequest()
-{
-    size_t consumed = this->_request.getConsumedBytes();
-    this->eraseFromReadBuffer(consumed);
-}
+bool				Client::getKeepAlive() const { return this->_keep_alive; }
 
-void Client::eraseWriteBuffer(size_t n)
-{
-    _write_offset += n;
-    if (_write_offset >= _write_buffer.size())
-    {
-        _write_buffer.clear();
-        _write_offset = 0;
-    }
-}
+const std::deque<std::string>&		Client::getResponseQueue() const { return (this->_response_queue); }
 
-bool Client::isWriteBufferEmpty() const
-{
-    return getWriteRemaining() == 0;
-}
+std::pair<std::string, std::string>	Client::getHostPort() const { return this->_host_port; }
 
-const char* Client::getWriteData() const
-{
-    return _write_buffer.data() + _write_offset;
-}
+// ------- SETTERS --------
 
-void	Client::clearReadBuffer()
-{
-	this->_read_buffer.clear();
-}
+void	Client::setKeepAlive( bool alive ) { this->_keep_alive = alive; }
 
-void	Client::eraseFromReadBuffer(size_t n)
-{
-	if (n >= this->_read_buffer.size())
-		this->_read_buffer.clear();
-	else
-		this->_read_buffer.erase(0, n);
-}
+// ------- MEMBER VARIABLE MANUPILATION --------
 
-void Client::clearWriteBuffer()
-{
-    _write_buffer.clear();
-    _write_offset = 0;
-}
+void	Client::appendToReadBuffer(const char* data, size_t len) { this->_read_buffer.append(data, len); }
 
-bool Client::parseBufferedRequest()
-{
-	return this->_request.parse(this->_read_buffer);
-}
+void	Client::appendToWriteBuffer(const std::string& data) { this->_write_buffer.append(data); }
 
-void Client::resetCurrentRequest()
-{
-	this->_request = HttpRequest();
-}
+bool	Client::parseBufferedRequest() { return this->_request.parse(this->_read_buffer); }
 
-void	Client::addResponseQueue(const std::string& response)
-{
-	this->_response_queue.push_back(response);
-}
+void	Client::addResponseQueue(const std::string& response) { this->_response_queue.push_back(response); }
 
-bool	Client::isResponseQueueEmpty()	const
-{
-	return(this->_response_queue.empty());
-}
+bool	Client::isResponseQueueEmpty()	const { return(this->_response_queue.empty()); }
 
-const std::string&	Client::frontResponse() const
-{
-	return(this->_response_queue.front());
-}
+const std::string&	Client::frontResponse() const { return(this->_response_queue.front()); }
 
-void	Client::popFrontResponse()
-{
-	this->_response_queue.pop_front();
-}
+void	Client::popFrontResponse() { this->_response_queue.pop_front(); }
 
-// --- Keep alive logic ---
-
-bool Client::getKeepAlive() const
-{
-	return this->_keep_alive;
-}
-
-void Client::setKeepAlive( bool alive )
-{
-	this->_keep_alive = alive;
-}
+// --- KEEP ALIVE LOGIC ---
 
 void Client::wantsKeepAlive()
 {
@@ -165,29 +97,41 @@ void Client::wantsKeepAlive()
 		this->_keep_alive = true;
 }
 
-void Client::updateTime()
-{
-	time(&(this->_last_activity));
-}
+void	Client::updateTime() { time(&(this->_last_activity)); }
 
-time_t Client::getLastActivity() const
-{
-	return (this->_last_activity);
-}
+// --- CLEANUP ---
 
 /// @brief	Close the file descriptor attached to this Socket.
 void	Client::closeFd(void) { if (this->_fd != -1) { close(this->_fd); this->_fd = -1; } }
 
-int	Client::getFd()	const { return this->_fd; }
+void	Client::eraseProcessedRequest() { size_t consumed = this->_request.getConsumedBytes(); this->eraseFromReadBuffer(consumed); }
 
-std::pair<std::string, std::string>	Client::getHostPort() const { return this->_host_port; }
-
-std::ostream &operator<<( std::ostream &out, Client const &c )
+void	Client::eraseWriteBuffer(size_t n)
 {
-	time_t last_act = c.getLastActivity();
-	char *t = ctime(&last_act);
-	t[strlen(t) - 1] = '\0'; //+ remove the new line
+	_write_offset += n;
+	if (_write_offset >= _write_buffer.size())
+	{
+		_write_buffer.clear();
+		_write_offset = 0;
+	}
+}
 
-	out << "Client [" << c.getFd() << "] " << c.getHostPort().first << ":" << c.getHostPort().second << " Last activity: " << t;
-	return out;
+void	Client::resetCurrentRequest() { this->_request = HttpRequest(); }
+
+bool	Client::isWriteBufferEmpty() const { return getWriteRemaining() == 0; }
+
+void	Client::clearReadBuffer() { this->_read_buffer.clear(); }
+
+void	Client::eraseFromReadBuffer(size_t n)
+{
+	if (n >= this->_read_buffer.size())
+		this->_read_buffer.clear();
+	else
+		this->_read_buffer.erase(0, n);
+}
+
+void Client::clearWriteBuffer()
+{
+    _write_buffer.clear();
+    _write_offset = 0;
 }

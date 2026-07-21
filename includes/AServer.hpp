@@ -15,10 +15,10 @@ class	AServer
 	protected:
 		std::map<int, Socket*>				_sockets;
 		std::map<int, Client*>				_clients;
-		std::map<int, CgiHandler*>			_cgi_handlers;
 		t_virtualServer						_virtualServers;
 		t_fdRoute							_fd_to_route; // This is to give to the handler, to know in which socket the client is connected, to after know in which virtual server i have to go
-		
+		std::map<int, CgiHandler*>			_cgi_handlers;
+
 		AServer(AServer const &other );
 		AServer &operator=( AServer const &other );
 
@@ -45,6 +45,10 @@ class	AServer
 		virtual void	removeFdFromMultiplexer(int fd) = 0;
 		virtual void	watchForRead(int fd) = 0;
 		virtual void	watchForWrite(int fd) = 0;
+
+		void				addCgiHandler(int fd, CgiHandler *handler);
+		CgiHandler*			getCgiHandler(int fd)	const;
+		bool				fdIsCgi(int fd);
 
 	public:
 		AServer();

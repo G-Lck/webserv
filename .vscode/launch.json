@@ -9,7 +9,7 @@
 			"type": "cppdbg",
 			"request": "launch",
 			"program": "${workspaceFolder}/WebServ",
-			"args": ["config/configs/valid/valid2.conf"],
+			"args": ["config/configs/valid/valid3.conf"],
 			"stopAtEntry": false,
 			"cwd": "${fileDirname}",
 			"environment": [],

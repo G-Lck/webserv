@@ -12,8 +12,27 @@ AServer::~AServer()
 
 // --------------- Exceptions ---------------
 
-AServer::runtimeAServerException::runtimeAServerException(const char* message)
-	: std::runtime_error(message) {}
+AServer::runtimeAServerException::runtimeAServerException(const char* message) : std::runtime_error(message) {} 
+
+// --------------- CGI ---------------
+
+CgiHandler	*AServer::getCgiHandler(int fd) const
+{
+	std::map<int, CgiHandler*>::const_iterator it = this->_cgi_handlers.find(fd);
+	if (it == this->_cgi_handlers.end())
+		return NULL;
+	return it->second;
+}
+
+void	AServer::addCgiHandler(int fd, CgiHandler *handler) { this->_cgi_handlers[fd] = handler; }
+
+bool	AServer::fdIsCgi(int fd)
+{
+	std::map<int, CgiHandler*>::const_iterator it = this->_cgi_handlers.find(fd);
+	if (it == this->_cgi_handlers.end())
+        return false;
+    return true;
+}
 
 // --------------- Set up Config ---------------
 
@@ -351,8 +370,10 @@ void	AServer::handleCompleteRequest(int fd)
 		// try to find it in the list of handlers for this client and if its open 
 		// if not creat a new one
 		// executeCGI
-		CgiHandler* cgi = new CgiHandler(handler);
+		CgiHandler* cgi = new CgiHandler(handler);		
 		cgi->validateCgi();
+
+		//c->addCgiHandler([which fd?], cgi);
 	}
 	else
 	{

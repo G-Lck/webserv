@@ -79,6 +79,7 @@ void	EpollServer::run(void)
 		{
 			// timeout expired
 			monitorClients();
+			// monitorCGI();
 			continue;
 		}
 		// Here we are itearing on all the events to run the right case for each fd
@@ -86,9 +87,13 @@ void	EpollServer::run(void)
 		{
 			int current_fd = this->_active_events[i].data.fd;
 			// Cases:
+			if (this->fdIsCgi(current_fd))
+			{
+				//handleCgiEvent(current_fd, this->_active_events[i].events);
+			}
 			// current_fd matches a listening socket: a new client
 			// connection is waiting to be accepted
-			if (this->fdMatch(current_fd))
+			else if (this->fdMatch(current_fd))
 			{
 				if (!this->addNewClient(current_fd))
 					continue;
@@ -109,6 +114,7 @@ void	EpollServer::run(void)
 			}
 		}
 		monitorClients(); //+ Check again all, case for when an active event
+		// monitorCGI();
 	}
 }
 
@@ -167,7 +173,28 @@ void	EpollServer::closeEpoll(void)
 	this->_epoll_fd = -1;
 }
 
+void	EpollServer::handleCgiEvent(int fd, uint32_t epoll_event)
+{
+    // handler = lookup CgiHandler* by fd   // from AServer's cgi map
+    // if handler == NULL:
+    //     return  // shouldn't happen, safety check
 
+    // if events & EPOLLOUT and fd == handler->getStdinFd():
+    //     write next chunk of handler's write buffer to fd
+    //     if all body written:
+    //         close stdin fd, remove from epoll, mark handler side done
+
+    // else if events & EPOLLIN and fd == handler->getStdoutFd():
+    //     read available data from fd into handler's read buffer
+    //     if read returns 0 (EOF):
+    //         mark cgi output finished
+    //         close stdout fd, remove from epoll
+    //         waitpid on handler's pid (non-blocking check or already reaped by monitorCgi)
+    //         build HTTP response from read buffer
+    //         attach response to handler's _client
+    //         re-arm client fd for EPOLLOUT
+    //         cleanup: erase fd(s) from AServer's cgi map, delete handler
+}
 #else
 
 void	EpollServer::initMultiplexer(void)

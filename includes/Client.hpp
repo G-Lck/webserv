@@ -3,6 +3,7 @@
 
 #include "WebServ.hpp"
 #include "HttpRequest.hpp"
+#include "HandlerCGI.hpp"
 
 class Client
 {
@@ -29,10 +30,11 @@ class Client
 	const char*							getWriteData() 		const;
 	size_t								getWriteRemaining() const;
 	const HttpRequest&					getRequest()		const;
-	const std::deque<std::string>&		getResponseQueue() const;
+	const std::deque<std::string>&		getResponseQueue()	const;
 	time_t								getLastActivity()	const;
 	int									getFd()				const;
 	std::pair<std::string, std::string>	getHostPort() 		const;
+	bool								getKeepAlive() const;
 
 	void				appendToReadBuffer(const char* data, size_t len);
 	void				appendToWriteBuffer(const std::string& data);
@@ -51,10 +53,11 @@ class Client
 	void				popFrontResponse();
 	void				closeFd(void);
 	bool				isWriteBufferEmpty() const;
-	bool				getKeepAlive() const;
+
 	void				setKeepAlive( bool alive );
 	void				wantsKeepAlive();
 	void				updateTime();
+
 };
 
 std::ostream &operator<<( std::ostream &out, Client const &c );
