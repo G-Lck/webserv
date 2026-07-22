@@ -14,27 +14,7 @@ AServer::~AServer()
 
 AServer::runtimeAServerException::runtimeAServerException(const char* message) : std::runtime_error(message) {} 
 
-// --------------- CGI ---------------
-
-CgiHandler	*AServer::getCgiHandler(int fd) const
-{
-	std::map<int, CgiHandler*>::const_iterator it = this->_cgi_handlers.find(fd);
-	if (it == this->_cgi_handlers.end())
-		return NULL;
-	return it->second;
-}
-
-void	AServer::addCgiHandler(int fd, CgiHandler *handler) { this->_cgi_handlers[fd] = handler; }
-
-bool	AServer::fdIsCgi(int fd)
-{
-	std::map<int, CgiHandler*>::const_iterator it = this->_cgi_handlers.find(fd);
-	if (it == this->_cgi_handlers.end())
-        return false;
-    return true;
-}
-
-// --------------- Set up Config ---------------
+// --------------- INITIALIZATION ---------------
 
 /// @brief Initializes physical sockets and sets up the virtual host routing maps.
 ///			Taking data from th parsed Globalconfig, we intialize a loop to create
@@ -79,78 +59,9 @@ void	AServer::addSocket(Socket *S)
 	this->_sockets.insert(std::make_pair(S->getFd(), S));
 }
 
-/// @brief	Close and delete all sockets.
-///			Iterate in the map of Sockets, closing the fd and freeing the memory
-void	AServer::closeSockets(void)
-{
-	std::map<int, Socket*>::iterator it = this->_sockets.begin();
-	while (it != this->_sockets.end())
-	{
-		it->second->closeFd();
-		delete it->second;
-		++it;
-	}
-	this->_sockets.clear();
-}
 
-/// @brief	Close and delete all remaining clients.
-///			Iterate in the map of Cliets, closing the fd and freeing the memory
-void	AServer::closeClients(void)
-{
-	std::map<int, Client*>::iterator it = this->_clients.begin();
-	while (it != this->_clients.end())
-	{
-		it->second->closeFd();
-		delete it->second;
-		++it;
-	}
-	this->_clients.clear();
-}
-// --------------- Monitoring ---------------
+// --------------- LAUNCHING ---------------
 
-void	AServer::refreshClientTime( int fd )
-{
-	std::map<int, Client*>::iterator it = this->_clients.find(fd);
-	if (it == this->_clients.end())
-		return ;
-	it->second->updateTime();
-}
-
-bool	AServer::clientTimeout( int fd )
-{
-	std::map<int, Client*>::iterator it = this->_clients.find(fd);
-	if (it == this->_clients.end())
-		return (false);
-	time_t	last_activity = it->second->getLastActivity();
-	time_t	now;
-	time(&now);
-
-	if (difftime(now, last_activity) > MAX_WAIT_TIME)
-		return (true);
-	return(false);
-}
-
-/// @brief Funtion to monitor client timeouts. If any timneout it will get disconected
-void	AServer::monitorClients()
-{
-	std::map<int, Client*>::iterator it = this->_clients.begin();
-	while (it != this->_clients.end())
-	{
-		std::map<int, Client*>::iterator next = it;
-		++next;
-		if (clientTimeout(it->first))
-		{
-			std::ostringstream oss;
-			oss << *(it->second) << " --> Client Timeout";
-			writeLog(oss.str(), SERVER_EVENTS); //+ Log Client timeout
-
-			this->clientDisconnect(it->first);
-		}
-		it = next;
-	}
-}
-
-// --------------- Launching ---------------
 
 void	AServer::initAServer(void)
 {
@@ -159,7 +70,8 @@ void	AServer::initAServer(void)
 	this->run();
 }
 
-// --------------- Handle Cases ---------------
+
+// --------------- ADDING A CLIENT ---------------
 
 /// @brief 	Simple helper function retuning true if the curr
 ///			matches with an fd of the list of Sockets
@@ -225,6 +137,8 @@ bool	AServer::addNewClient(int curr_socket_fd)
 	return (true);
 }
 
+// ---------------  READING  ---------------
+
 /// @brief	This function will call recv, and either handle the errors
 ///			or on success:
 ///			Case 1: The request is not yet complete:
@@ -284,119 +198,165 @@ void    AServer::readRequest(int fd)
 				std::stringstream ss;
 				ss << (*c) << " -> Complete request recieved";
 				writeLog(ss.str(), SERVER_EVENTS); //+ Log request
+				
 				std::stringstream sss;
 				sss << c->getRequest();
 				writeLog(sss.str(), ACCESS);
-		
-				this->handleCompleteRequest(fd);
-				const std::deque<std::string> &responses = c->getResponseQueue();
-				for (size_t i = 0; i < responses.size(); i++)
-					std::cout << responses[i] << std::endl;
-				if (!c->getKeepAlive())
-				{
-					this->clientDisconnect(fd);
-					break;
-				}
+
+				//+ This case is CGI init, no reponse created
+				if (!this->handleCompleteRequest(fd))
+					break ;
 			}
 		}
 		catch (const HttpException& e)
 		{
-			const std::deque<std::string> &responses = c->getResponseQueue();
-			for (size_t i = 0; i < responses.size(); i++)
-				std::cout << responses[i] << std::endl;
-			std::cout << e.getCode() << " " <<e.what() << std::endl;
+			std::stringstream ss;
+			ss << e.getCode() << ": " << e.what();
+			writeLog(ss.str(), STATUS_CODE);
+			//~ HERE WE MISS A FUNCTION TO EIRTHER GET THE PAGE FROM LOCATION
+			//~ OR CALL:
+			finishRequestCycle(c); //+ Cleanup http request
+			this->prepareToSend(fd, c, e.getResponseStr());
 		}
-	}
-}
-
-/// @brief	We check on close for -1 in rare case where send() error code is EPIPE. Flag is set in send to MSG_NOSIGNAL to mute
-///			the signal sent by the kernell, and instead of killing the program we handle the errors.
-///			EPIPE will be sent in the case where the client disconnects mid-read (possible double close, we log error just in case). 
-void	AServer::clientDisconnect(int fd)
-{
-	this->removeFdFromMultiplexer(fd);
-	if (close(fd) == -1)
-	{
-		std::string err = "Client already disconnected: ";
-		writeLog(err.append(strerror(errno)), ERROR_INFO);
-	}
-
-	std::map<int, Client*>::iterator it = this->_clients.find(fd);
-	if (it != this->_clients.end())
-	{
-		std::stringstream ss;
-		ss << *(it->second) << " -> Client Disconnect";
-		writeLog(ss.str(), SERVER_EVENTS);
-
-		delete it->second;
-		this->_clients.erase(it);
 	}
 }
 
 /// @brief	As the function name describes, We handle a request was all succesfully read
 ///			and stored in the body of the Client.
+///			We build the HttpResponse and then send it to the handler -> if the response
+///			Asks for a cgi handler, we init the handler, create the child process and
+///			return to the main loop.
+///			Else we handle with executeStatic() and we create the response string
+///			2 Cases if throw we create the error by checking if error_pages exists or we
+///			return a defualt error response sting. otherwise we create the ok response string.
 /// @param fd Client
-void	AServer::handleCompleteRequest(int fd)
+/// @return true → response built (static or error path) | false → CGI just started, nothing to send yet
+bool	AServer::handleCompleteRequest(int fd)
 {
+	std::string	single_response;
+	
+	//+ Look for this Client in the map
 	std::map<int, Client*>::iterator it = this->_clients.find(fd);
 	if (it == this->_clients.end())
 	{
-		writeLog("Request: unknown fd", ERROR_INFO);
-		return ;
+		writeLog("Request: unknown fd at handleCompleRequest, possible race", ERROR_INFO);
+		return false;
 	}
 	Client* c = it->second;
 	
-	// Build the HTTP response for this request.
+	//+ Build the HTTP response for this request.
 	t_virtualServer::iterator route_it = this->_virtualServers.find(c->getHostPort());
 	if (route_it == this->_virtualServers.end())
 	{
-		writeLog("Request: no virtual server for client route", ERROR_INFO);
-		return ;
+		HttpException e(500, "500: Internal Server Error: handleCompleRequest()");
+		writeLog("500: Internal Server Error: handleCompleRequest()", STATUS_CODE);
+		finishRequestCycle(c); //+ Cleanup http request
+		this->prepareToSend(fd, c, e.getResponseStr());
+		return true;
 	}
 
-	Handler	handler(c);
+	//+ Parse the request
+	Handler		handler(c);
 	try
 	{
-		handler.initHandler(route_it->second);
+		handler.initAndParseHandler(route_it->second); //* this may throw
 	}
 	catch(const HttpException& e)
 	{
-		std::cerr << e.what() << '\n';
+		std::stringstream ss;
+		ss << e.getCode() << ": " << e.what();
+		writeLog(ss.str(), STATUS_CODE);
+		//~ HERE WE MISS A FUNCTION TO EIRTHER GET THE PAGE FROM LOCATION
+		//~ OR CALL:
+		single_response = e.getResponseStr();
+		finishRequestCycle(c); //+ Cleanup http request
+		this->prepareToSend(fd, c, single_response);
+		return true;
 	}
 
-	std::string single_response;
-	if (handler.isCGI())
+	//+ Select type of Handler according to the request
+	CgiHandler*	cgi = NULL;
+	try
 	{
-		// try to find it in the list of handlers for this client and if its open 
-		// if not creat a new one
-		// executeCGI
-		CgiHandler* cgi = new CgiHandler(handler);		
-		cgi->validateCgi();
-
-		//c->addCgiHandler([which fd?], cgi);
+		//+ Static Handler: always a response ready even if it fails. So we return after
+		if (!handler.isCGI())
+		{
+			//handler.executeStatic(); //* this may throw (only if you dont find the error page inside location)
+			//single_response = handler->client->_response.buildResponseStr();
+			single_response = process_and_build_response(c);
+			finishRequestCycle(c); //+ Cleanup http request
+			this->prepareToSend(fd, c, single_response);
+			return true;
+		}
+		//+ Cgi Handler: We init the allocated CgiHandler, if it throws, the catch deletes it and send the response
+		//+ On success, we create the handler, the child process and go back to the main loop to check for write to the cgi
+		else
+		{
+			cgi = new CgiHandler(handler);
+			try
+			{
+				cgi->validateCgi();	//*this may throw
+				cgi->openPipe();	//*this may throw
+			}
+			catch(const HttpException&)
+			{
+				delete cgi; //* Still need to check for a safe destructor por the kill(pid)
+				throw ;
+			}
+			this->addCgiToMap(cgi->getStdoutFd(), cgi);
+			//* Still need to add to multiplexer
+			cgi->setStartTime();
+			finishRequestCycle(c); //+ Cleanup response class, everything was read
+			return false;
+		}
 	}
-	else
+	catch(const HttpException& e)
 	{
-		//handler.executeStatic();
-		single_response = process_and_build_response(c);
+		std::stringstream ss;
+		ss << e.getCode() << ": " << e.what();
+		writeLog(ss.str(), STATUS_CODE);
+		//~ HERE WE MISS A FUNCTION TO EIRTHER GET THE PAGE FROM LOCATION
+		//~ OR CALL:
+		single_response = e.getResponseStr();
+		finishRequestCycle(c); //+ Cleanup http request
+		this->prepareToSend(fd, c, single_response);
+		return true;
 	}
-	
-
-	// Clean up: erase the processed request from the read buffer, resets state for the next request.
-	c->addResponseQueue(single_response);
-	c->eraseProcessedRequest();
-	c->wantsKeepAlive(); // Set the _keep_alive member variable before reseting the request
-	c->resetCurrentRequest();
-
-	// Check if needs to be queued before sending
-	// leaves the new response queued. sendResponse will pick it up later when the current one finishes.
-	if (c->isWriteBufferEmpty() && !c->isResponseQueueEmpty())
-	{
-		c->appendToWriteBuffer(c->frontResponse());
-		c->popFrontResponse();
-		this->watchForWrite(fd);
-	}
+	return false;
 }
+
+/// @brief Cleaning up the request class, Set keep alive according to the request
+void AServer::finishRequestCycle(Client* c)
+{
+    c->eraseProcessedRequest();
+    c->wantsKeepAlive();
+    c->resetCurrentRequest();
+}
+
+/// @brief	Lasts steps for creating a response string, this funtion will work arround the response created
+///			string, adding it to the queue and changing to EPOLLOUT
+///			in case of needed, so in the next iteration we can send the response.
+/// @param fd The client file descriptor for that request processed
+/// @param single_response	The string with the full response. It can be a succes obtained from a Handler
+///							or an exception default-build string obtained from HttpException::buildDefaultResponse() 
+
+void AServer::prepareToSend(int fd, Client* c, std::string single_response)
+{
+    c->addResponseQueue(single_response);
+
+	//+ Check if needs to be queued before sending
+	//+ leaves the new response queued. sendResponse will pick it up later when the current one finishes.
+    if (c->isWriteBufferEmpty() && !c->isResponseQueueEmpty())
+    {
+        c->appendToWriteBuffer(c->frontResponse());
+        c->popFrontResponse();
+        this->watchForWrite(fd);
+    }
+}
+
+
+// ---------------  RESPONDING  ---------------
+
 
 /// @brief	Called when EPOLLOUT fires (socket ready to write):
 ///			
@@ -458,5 +418,174 @@ void    AServer::sendResponse(int fd)
 			this->watchForRead(fd);
 		else
 			this->clientDisconnect(fd);
+	}
+}
+
+
+// ---------------   CLEANUP   ---------------
+
+
+/// @brief	We check on close for -1 in rare case where send() error code is EPIPE. Flag is set in send to MSG_NOSIGNAL to mute
+///			the signal sent by the kernell, and instead of killing the program we handle the errors.
+///			EPIPE will be sent in the case where the client disconnects mid-read (possible double close, we log error just in case). 
+void	AServer::clientDisconnect(int fd)
+{
+	this->removeFdFromMultiplexer(fd);
+	if (close(fd) == -1)
+	{
+		std::string err = "Client already disconnected: ";
+		writeLog(err.append(strerror(errno)), ERROR_INFO);
+	}
+
+	std::map<int, Client*>::iterator it = this->_clients.find(fd);
+	if (it != this->_clients.end())
+	{
+		std::stringstream ss;
+		ss << *(it->second) << " -> Client Disconnect";
+		writeLog(ss.str(), SERVER_EVENTS);
+
+		delete it->second;
+		this->_clients.erase(it);
+	}
+}
+
+void	AServer::cgiDisconnect(int fd)
+{
+	this->removeFdFromMultiplexer(fd);
+
+	std::map<int, CgiHandler*>::iterator it = this->_cgi_handlers.find(fd);
+	if (it != this->_cgi_handlers.end())
+	{
+		delete it->second;
+		this->_cgi_handlers.erase(it);
+	}
+}
+
+/// @brief	Close and delete all remaining clients.
+///			Iterate in the map of Cliets, closing the fd and freeing the memory
+void	AServer::closeClients(void)
+{
+	std::map<int, Client*>::iterator it = this->_clients.begin();
+	while (it != this->_clients.end())
+	{
+		it->second->closeFd();
+		delete it->second;
+		++it;
+	}
+	this->_clients.clear();
+}
+
+/// @brief	Close and delete all sockets.
+///			Iterate in the map of Sockets, closing the fd and freeing the memory
+void	AServer::closeSockets(void)
+{
+	std::map<int, Socket*>::iterator it = this->_sockets.begin();
+	while (it != this->_sockets.end())
+	{
+		it->second->closeFd();
+		delete it->second;
+		++it;
+	}
+	this->_sockets.clear();
+}
+
+
+// --------------- CGI RELATED FUNCTIONS ---------------
+
+
+CgiHandler	*AServer::getCgiHandler(int fd) const
+{
+	std::map<int, CgiHandler*>::const_iterator it = this->_cgi_handlers.find(fd);
+	if (it == this->_cgi_handlers.end())
+		return NULL;
+	return it->second;
+}
+
+void	AServer::addCgiToMap(int fd, CgiHandler *handler) { this->_cgi_handlers[fd] = handler; }
+
+void	AServer::removeCgiFromMap(int fd) { if(getCgiHandler(fd) != NULL) {this->_cgi_handlers.erase(fd);} }
+
+bool	AServer::fdIsCgi(int fd) const
+{
+	std::map<int, CgiHandler*>::const_iterator it = this->_cgi_handlers.find(fd);
+	if (it == this->_cgi_handlers.end())
+        return false;
+    return true;
+}
+
+
+// --------------- CLIENT MONITORING ---------------
+
+
+void	AServer::refreshClientTime( int fd )
+{
+	std::map<int, Client*>::iterator it = this->_clients.find(fd);
+	if (it == this->_clients.end())
+		return ;
+	it->second->updateTime();
+}
+
+bool	AServer::clientTimeout( int fd )
+{
+	std::map<int, Client*>::iterator it = this->_clients.find(fd);
+	if (it == this->_clients.end())
+		return (false);
+	time_t	last_activity = it->second->getLastActivity();
+	time_t	now;
+	time(&now);
+
+	if (difftime(now, last_activity) > MAX_WAIT_TIME)
+		return (true);
+	return(false);
+}
+
+/// @brief Funtion to monitor client timeouts. If any timneout it will get disconected
+void	AServer::monitorClients()
+{
+	std::map<int, Client*>::iterator it = this->_clients.begin();
+	while (it != this->_clients.end())
+	{
+		std::map<int, Client*>::iterator next = it;
+		++next;
+		if (clientTimeout(it->first))
+		{
+			std::ostringstream oss;
+			oss << *(it->second) << " --> Client Timeout";
+			writeLog(oss.str(), SERVER_EVENTS); //+ Log Client timeout
+
+			this->clientDisconnect(it->first);
+		}
+		it = next;
+	}
+}
+
+void	AServer::monitorCGI()
+{
+	std::map<int, CgiHandler*>::iterator it = this->_cgi_handlers.begin();
+	while (it != this->_cgi_handlers.end())
+	{
+		std::map<int, CgiHandler*>::iterator next = it;
+		++next;
+		if (it->second->cgiTimeout())
+		{
+			//+ Log
+			std::ostringstream oss;
+			oss << *(it->second) << " --> CGI Timeout";
+			writeLog(oss.str(), SERVER_EVENTS);
+
+			//+ Send response timeout
+			// if (i have error page)
+			// {
+			//~ HERE WE MISS A FUNCTION TO EIRTHER GET THE PAGE FROM LOCATION
+			//~ OR CALL:
+			// }
+			// else
+			std::string single_response = HttpException(504, " Cgi Timeout").getResponseStr();
+			this->prepareToSend(it->second->getClient()->getFd(), it->second->getClient(), single_response);
+
+			//+ Kill Cgi
+			this->cgiDisconnect(it->first);
+		}
+		it = next;
 	}
 }

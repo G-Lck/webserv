@@ -7,10 +7,8 @@ CgiHandler::CgiHandler() : _pid(-1), _stdinFd(-1), _stdoutFd(-1), _finished(fals
 CgiHandler::~CgiHandler()
 {
 	// kill pid???
-	if (this->_stdinFd != -1)
-		close(this->_stdinFd);
-	if (this->_stdoutFd != -1)
-		close(this->_stdoutFd);
+	this->closeStdinFd();
+	this->closeStdoutFd();
 
 	if (this->_env != NULL)
 	{
@@ -19,6 +17,21 @@ CgiHandler::~CgiHandler()
 		delete[] this->_env;
 	}
 }
+
+void	CgiHandler::closeStdinFd()
+{
+	if (this->_stdinFd != -1)
+		close(this->_stdinFd);
+	this->_stdinFd = -1;
+}
+
+void	CgiHandler::closeStdoutFd()
+{
+	if (this->_stdoutFd != -1)
+		close(this->_stdoutFd);
+	this->_stdoutFd = -1;
+}
+
 
 CgiHandler::CgiHandler(Handler const &handler) : Handler(handler)
 {
@@ -34,7 +47,21 @@ CgiHandler::CgiHandler(Handler const &handler) : Handler(handler)
 	this->_writeOffset = 0;
 }
 
-// ---------- VALIDATE REQUEST ----------
+
+// ---------- OVERLOAD ----------
+
+std::ostream &operator<<(std::ostream &out, CgiHandler const &cgi)
+{
+	time_t start = cgi.getStartTime();
+	char *t = ctime(&start);
+	t[strlen(t) - 1] = '\0'; //+ remove the new line
+
+	out << "Cgi Handler: pid[" << cgi.getPid() << "] - On Client [" << cgi.getClient()->getFd() << "] - ";
+	out << "script-path: " << cgi.getScriptPath() << " Time of start: " << t;
+}
+
+// ---------- SETUP AND INIT ----------
+
 
 /// @brief	Fucntion to validate the request values before starting with the cgi
 ///			checks: isValidFile(), validMethod(), validContentLength()
@@ -48,45 +75,10 @@ void	CgiHandler::validateCgi()
 		throw HttpException(400, "Bad Request (Content-Length)");
 }
 
-/// @brief	Function to validate the content length header
-///			It will check its there for a second time
-///			also checks and most important, if is not bigger than max size
-///			And also compares with the size of the body to actually match
-bool	CgiHandler::validContentLength()
-{
-	const std::map<std::string, std::string> headers = this->getHttpRequest().getHeaders();
-	std::map<std::string, std::string>::const_iterator it = headers.find("Content-Length");
-
-	if (it == headers.end()) //+ Extra check if not found (we check that in the parser anyways)
-		throw HttpException(411, "The request did not specify the length of its content");
-
-	size_t content_length = std::atoi(it->second.c_str()); //+ Get the length set in the header
-
-	if (content_length != this->getHttpRequest().getBody().size()
-		|| content_length > (size_t)this->getLocation().getClientMaxBodySize())
-		return false; //+ Check if size is not bigger than location or matches with the actual body
-	return (true);
-}
-
-/// @brief	Checks comnparing the method passed in the request with the allowed methos for that location
-bool	CgiHandler::validMethod()
-{
-	const std::vector<std::string> allowed_methods = this->_location.getAllowMethods();
-	std::vector<std::string>::const_iterator it = allowed_methods.begin();
-	
-	while (it != allowed_methods.end())
-	{
-		if (*it == this->_client->getRequest().getMethod())
-			return true;
-		it++;
-	}
-	return (false);
-}
-
-// ---------- SETUP ----------
-
 void	CgiHandler::setEnvVars()
 {
+	std::vector<std::string> ev;
+
 
 }
 
@@ -94,6 +86,45 @@ void	CgiHandler::openPipe()
 {
 
 }
+
+// ---------- REQUEST/RESPONSE PROCESING ----------
+
+
+/*
+* What the response needs
+_status_code
+_status_message
+_headers
+_body
+_connection
+*/
+
+void	CgiHandler::continueReading()
+{
+    //     read available data from fd into handler's read buffer
+    //     if read returns 0 (EOF):
+    //         mark cgi output finished
+    //         close stdout fd, remove from epoll
+    //         waitpid on handler's pid (non-blocking check or already reaped by monitorCgi)
+    //         build HTTP response from read buffer
+    //         attach response to handler's _client
+    //         re-arm client fd for EPOLLOUT
+    //         cleanup: erase fd(s) from AServer's cgi map, delete handler
+
+}
+
+void	CgiHandler::switchToRead()
+{
+	
+}
+
+void	CgiHandler::continueWriting()
+{
+	//     write next chunk of handler's write buffer to fd
+    //     if all body written:
+    //         close stdin fd, remove from epoll, mark handler side done
+}
+
 
 // ---------- GETTERS ----------
 
@@ -120,3 +151,19 @@ int	CgiHandler::getExitStatus() const { return this->_exitStatus; }
 const std::string&	CgiHandler::getScriptPath() const { return this->_scriptPath; }
 
 Client*	CgiHandler::getClient() const { return this->_client; }
+
+
+// ---------- MONITORING ----------
+
+
+void	CgiHandler::setStartTime() { time(&(this->_startTime)); }
+
+bool	CgiHandler::cgiTimeout()
+{
+	time_t	now;
+	time(&now);
+
+	if (difftime(now, this->_startTime) > CGI_TIME_LIMIT)
+		return (true);
+	return(false);
+}

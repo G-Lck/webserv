@@ -19,6 +19,7 @@ class Handler
 		std::string					_method;
 		std::string					_path;
 
+		//+ ------ FIRST PARSING ------
 		void	checkDotsPath();
 		void	findServer(const std::vector<ServerConfig> &virtual_servers);
 		void	findLocation();
@@ -26,16 +27,21 @@ class Handler
 		void	checkMethod();
 		void	constructPath();
 
+		//+ ------ SECOND PARSING ------
+		void	validateStatic();
+		bool	validMethod();
+		bool	validContentLength();
+
 	public:
 		Handler();
 		Handler(Client* client);
 		Handler(const Handler& other);
 		Handler& operator=(const Handler& other);
 		~Handler();
-		
+
 		//+ ------ MAIN FUNCTIONALLITY ------
-		void	initHandler(const std::vector<ServerConfig> &virtual_servers);
-		bool	isCGI();
+		void	initAndParseHandler(const std::vector<ServerConfig> &virtual_servers);
+		bool	isCGI() const;
 		void	executeStatic();
 
 		//+ ------ GETTERS ------
@@ -45,6 +51,9 @@ class Handler
 		const LocationConfig&	getLocation() const;
 		const std::string&		getMethod() const;
 		const std::string&		getPath() const;
+		bool					hasErrorPage(int code) const;
+
+		std::string				getErrorPageContent(int code) const;
 };
 
 #endif

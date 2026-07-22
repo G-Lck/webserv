@@ -26,13 +26,15 @@ Handler& Handler::operator=(const Handler& other) {
 
 Handler::~Handler() {}
 
+
 // ---------- DEFINE TYPE ----------
+
 
 /// @brief	Function that compares the _path set on the Handler during setup and the 
 ///			cgi_path set in the LocationConfig for the running virtual sever.
 /// @return If the location is not empty, and it matches with the one in location config, it will
 ///			return true, otherwise returns false.
-bool	Handler::isCGI()
+bool	Handler::isCGI() const
 {
     const std::string &cgi_path = this->_location.getCgiHandler().first;
     if (cgi_path.empty())
@@ -44,7 +46,8 @@ bool	Handler::isCGI()
 	return (false);
 }
 
-// ---------- SETUP FUNCTIONS ----------
+// ---------- SETUP/PARSE FUNCTIONS ----------
+
 
 /// @brief findServer will try to match the server name, if given, by the first virtual server with
 /// this name. If no name or not found we fall back on the first server with default_server as name.
@@ -153,7 +156,7 @@ void	Handler::constructPath()
 	this->_path = "." + this->_location.getRoot() + this->_http_request.getPath();
 }
 ///
-void	Handler::initHandler(const std::vector<ServerConfig> &virtual_servers)
+void	Handler::initAndParseHandler(const std::vector<ServerConfig> &virtual_servers)
 {
 	checkDotsPath();
 	findServer(virtual_servers);
@@ -163,7 +166,58 @@ void	Handler::initHandler(const std::vector<ServerConfig> &virtual_servers)
 	constructPath();
 }
 
+
+// ---------- VALIDATE REQUEST ----------
+
+
+/// @brief	Fucntion to validate the request values before starting with the cgi
+///			checks: isValidFile(), validMethod(), validContentLength()
+void	Handler::validateStatic()
+{
+	if (!validMethod())	//+ Check if allowed methods in location matches with request method
+		throw HttpException(405, "Method Not Allowed");
+	if (!validContentLength())
+		throw HttpException(400, "Bad Request (Content-Length)");
+}
+
+/// @brief	Function to validate the content length header
+///			It will check its there for a second time
+///			also checks and most important, if is not bigger than max size
+///			And also compares with the size of the body to actually match
+bool	Handler::validContentLength()
+{
+	const std::map<std::string, std::string> headers = this->getHttpRequest().getHeaders();
+	std::map<std::string, std::string>::const_iterator it = headers.find("Content-Length");
+
+	if (it == headers.end()) //+ Extra check if not found (we check that in the parser anyways)
+		throw HttpException(411, "The request did not specify the length of its content");
+
+	size_t content_length = std::atoi(it->second.c_str()); //+ Get the length set in the header
+
+	if (content_length != this->getHttpRequest().getBody().size()
+		|| content_length > (size_t)this->getLocation().getClientMaxBodySize())
+		return false; //+ Check if size is not bigger than location or matches with the actual body
+	return (true);
+}
+
+/// @brief	Checks comnparing the method passed in the request with the allowed methos for that location
+bool	Handler::validMethod()
+{
+	const std::vector<std::string> allowed_methods = this->_location.getAllowMethods();
+	std::vector<std::string>::const_iterator it = allowed_methods.begin();
+	
+	while (it != allowed_methods.end())
+	{
+		if (*it == this->_client->getRequest().getMethod())
+			return true;
+		it++;
+	}
+	return (false);
+}
+
+
 // ---------- GETTERS ----------
+
 
 Client* Handler::getClient() const { return this->_client; }
 
@@ -176,3 +230,23 @@ const LocationConfig& Handler::getLocation() const { return this->_location; }
 const std::string& Handler::getMethod() const { return this->_method; }
 
 const std::string& Handler::getPath() const { return this->_path; }
+
+bool Handler::hasErrorPage(int code) const { return this->_location.getErrorPages().find(code) != this->_location.getErrorPages().end(); }
+
+
+// ---------- ERROR PAGES ----------
+
+
+std::string	Handler::getErrorPageContent(int code) const
+{
+	// look up code in this->_location's error pages map
+	// if not found:
+	//     return empty string   // caller falls back to default
+
+	// open the file at that path
+	// if open fails (missing/unreadable):
+	//     return empty string   // caller falls back to default
+
+	// read entire file into a string
+	// return that string
+}

@@ -14,14 +14,20 @@ const char*	HttpException::what() const throw()
 
 std::string buildDefaultResponse(std::string msg)
 {
+	std::string body = "<h1>" + msg + "</h1>";
+	std::ostringstream len;
+	len << body.size();
+
 	std::string response = "HTTP/1.1 " + msg + "\r\n";
-	response += "Content-Length: 0\r\n";
+	response += "Content-Type: text/html\r\n";
+	response += "Content-Length: " + len.str() + "\r\n";
 	response += "Connection: close\r\n\r\n";
+	response += body;
 
 	return (response);
 }
 
-std::string HttpException::getResponseStr()
+std::string HttpException::getResponseStr() const
 {
 	writeLog(this->_message, STATUS_CODE);
 
@@ -35,12 +41,16 @@ std::string HttpException::getResponseStr()
 			return (buildDefaultResponse("404 Not Found"));
 		case 405:
 			return (buildDefaultResponse("405 Method Not Allowed"));
+		case 411:
+			return (buildDefaultResponse("411 Length Required"));
 		case 413:
 			return (buildDefaultResponse("413 Payload Too Large"));
 		case 500:
 			return (buildDefaultResponse("500 Internal Server Error"));
 		case 501:
 			return (buildDefaultResponse("501 Not Implemented"));
+		case 504:
+			return (buildDefaultResponse("504 Gateway Timeout"));
 		case 505:
 			return (buildDefaultResponse("505 HTTP Version Not Supported"));
 		default:

@@ -22,6 +22,8 @@ class HttpResponse
 		std::map<std::string, std::string>	getHeaders() const;
 		const std::string&					getBody() const;
 		bool								getConnection() const;
+
+		std::string							buildResponseStr() const;
 };
 
 std::ostream &operator<<(std::ostream &out, HttpResponse const &res);

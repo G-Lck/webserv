@@ -104,17 +104,17 @@ bool HttpRequest::parseBody(const std::string& body_raw)
 	if (it == this->_headers.end())
 		throw HttpException(411, "The request did not specify the length of its content");
 
-	int	body_len = std::atoi(it->second.c_str());
-	
-	if (body_len < 0)
-		throw HttpException(413, "Negative body size");
+	if (it->second.size() > 15 || it->second.find_first_not_of("0123456789") != std::string::npos)
+		throw HttpException(400, "Bad Request - Content-Length.");
+	size_t	body_len = std::atol(it->second.c_str());
+
 	if (body_len > MAX_BODY) // should be something form config file
 		throw HttpException(413, "Content Too Large");
 
-	if (body_raw.size() < (size_t)body_len)
+	if (body_raw.size() < body_len)
 		return false;
-	this-> _body = body_raw.substr(0, (size_t)body_len);
-	this->_consumed_bytes += (size_t)body_len;
+	this-> _body = body_raw.substr(0, body_len);
+	this->_consumed_bytes += body_len;
 	return true;
 }
 

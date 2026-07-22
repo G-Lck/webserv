@@ -27,16 +27,25 @@ class	AServer
 		void	closeSockets(void);
 		void	closeClients(void);
 		
+		//+ clientelle
 		bool	fdMatch(int curr) const;
 		bool	addNewClient(int curr_socket_fd);
 		void	clientDisconnect(int fd);
 		
-		void	handleCompleteRequest(int fd);
+		//+ read
 		void	readRequest(int fd);
+		bool	handleCompleteRequest(int fd);
+		void	finishRequestCycle(Client* c);
+		void	prepareToSend(int fd, Client * c, std::string single_response);
+		
+		//+ send
 		void	sendResponse(int fd);
+		
+		//+ timeout
 		bool	clientTimeout( int fd );
 		void	refreshClientTime( int fd );
 		void	monitorClients();
+		void	monitorCGI();
 
 		virtual void	initMultiplexer(void) = 0;
 		virtual void	addSocketsToMultiplexer(void) = 0;
@@ -46,9 +55,12 @@ class	AServer
 		virtual void	watchForRead(int fd) = 0;
 		virtual void	watchForWrite(int fd) = 0;
 
-		void				addCgiHandler(int fd, CgiHandler *handler);
+		//+ cgi
+		void				addCgiToMap(int fd, CgiHandler *handler);
+		void				removeCgiFromMap(int fd);
 		CgiHandler*			getCgiHandler(int fd)	const;
-		bool				fdIsCgi(int fd);
+		bool				fdIsCgi(int fd) const;
+		void				cgiDisconnect(int fd);
 
 	public:
 		AServer();

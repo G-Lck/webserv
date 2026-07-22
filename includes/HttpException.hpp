@@ -17,7 +17,7 @@ class HttpException: public std::exception
 
 		int	getCode() const;
 		const char*	what() const throw();
-		std::string	getResponseStr();
+		std::string	getResponseStr() const;
 };
 
 #endif

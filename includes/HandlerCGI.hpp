@@ -30,14 +30,14 @@ class CgiHandler : public Handler
 
 		//+ Setup
 		void	validateCgi();
-		bool	validMethod();
-		bool	validContentLength();
-
 		void	setEnvVars();
-		void	openPipe();
-
-		//+ Execution
 		
+		//+ Execution
+		void	openPipe();
+		void	continueReading();
+		void	continueWriting();
+		void	switchToRead();
+
 		//+ Getters
 		pid_t				getPid() const;
 		int					getStdinFd() const;
@@ -52,7 +52,15 @@ class CgiHandler : public Handler
 		const std::string&	getScriptPath() const;
 		Client*				getClient() const;
 
+		//+ Monitoring
+		void	setStartTime();
+		bool	cgiTimeout();
+
 		//+ Clean up
+		void	closeStdinFd();
+		void	closeStdoutFd();
 };
+
+std::ostream &operator<<(std::ostream &out, CgiHandler const &cgi);
 
 #endif

@@ -42,6 +42,28 @@ bool	HttpResponse::getConnection() const
 	return this->_connection;
 }
 
+std::string	HttpResponse::buildResponseStr() const
+{
+	std::ostringstream oss;
+	oss << "HTTP/1.1 " << this->_status_code << " " << this->_status_message << "\r\n";
+
+	std::map<std::string, std::string> headers = this->_headers; // local copy
+	std::ostringstream len;
+	len << this->_body.size();
+	std::map<std::string, std::string>::iterator it = headers.find("Content-Length");
+	if (it != headers.end())
+		it->second = len.str();
+	else
+		headers.insert(std::make_pair("Content-Length", len.str()));
+
+	it = headers.begin();
+	for (; it != headers.end(); ++it)
+		oss << it->first << ": " << it->second << "\r\n";
+
+	oss << "\r\n" << this->_body;
+	return oss.str();
+}
+
 std::ostream &operator<<(std::ostream &out, HttpResponse const &req )
 {
 	out << req.getStatusCode() << " " << req.getStatusMessage() << " ";
