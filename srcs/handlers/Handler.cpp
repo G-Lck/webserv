@@ -44,7 +44,7 @@ bool	Handler::isCGI() const
 	if (this->_path.compare(this->_path.length() - cgi_path.length(), cgi_path.length(), cgi_path) == 0)
     	return true;
 	return (false);
-}
+}  //~ CHECK THIS
 
 // ---------- SETUP/PARSE FUNCTIONS ----------
 

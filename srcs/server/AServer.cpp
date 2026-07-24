@@ -223,7 +223,7 @@ void    AServer::readRequest(int fd)
 
 /// @brief	As the function name describes, We handle a request was all succesfully read
 ///			and stored in the body of the Client.
-///			We build the HttpResponse and then send it to the handler -> if the response
+///			We build the HttpRequest and then send it to the handler -> if the request
 ///			Asks for a cgi handler, we init the handler, create the child process and
 ///			return to the main loop.
 ///			Else we handle with executeStatic() and we create the response string

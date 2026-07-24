@@ -21,7 +21,7 @@ std::string buildDefaultResponse(std::string msg)
 	std::string response = "HTTP/1.1 " + msg + "\r\n";
 	response += "Content-Type: text/html\r\n";
 	response += "Content-Length: " + len.str() + "\r\n";
-	response += "Connection: close\r\n\r\n";
+	response += "Connection: close\r\n\r\n";  //~ SEE LATER
 	response += body;
 
 	return (response);
