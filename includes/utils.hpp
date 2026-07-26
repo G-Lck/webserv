@@ -9,7 +9,9 @@ class Client;
 std::string		process_and_build_response( Client *client );                     
 
 void			writeLog( std::string msg, int flag );
-   
+
+std::string		cutString(std::string str, char c);
+
 std::string		getRecvErrorStr( int err );
 
 std::string		getEpollCtlErrorStr( int err );

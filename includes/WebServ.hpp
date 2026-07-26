@@ -50,6 +50,7 @@ enum LogFiles
 #include <sys/socket.h> // socket(), bind(), listen(), accept(), send(), recv(), setsockopt()
 #include <netdb.h>      // getaddrinfo(), freeaddrinfo(), struct addrinfo
 #include <netinet/in.h> // struct sockaddr_in, htons(), htonl(), ntohs(), ntohl()
+#include <arpa/inet.h> // inet_ntoa
 
 // --- POSIX Multiplexing & System Calls ---
 #include <poll.h>       // poll(), struct pollfd, POLLIN, POLLOUT

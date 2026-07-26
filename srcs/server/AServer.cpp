@@ -121,6 +121,9 @@ bool	AServer::addNewClient(int curr_socket_fd)
 	// Set the time for timeout 
 	newClient->updateTime();
 
+	// Set Remote address
+	newClient->setRemoteAddress(inet_ntoa(addr_client.sin_addr));
+
 	// Insert the client in the map fd:Client 
 	this->_clients.insert(std::make_pair(fd_client, newClient));
 

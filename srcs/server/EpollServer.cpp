@@ -75,13 +75,6 @@ void	EpollServer::run(void)
 				continue;
 			throw runtimeEpollServerException((std::string("Error fatal:\n") + strerror(errno)).c_str());
 		}
-		if (fd_count == 0) //+ Case for no active events
-		{
-			// timeout expired
-			monitorClients();
-			monitorCGI();
-			continue;
-		}
 		// Here we are itearing on all the events to run the right case for each fd
 		for (int i = 0; i < fd_count; ++i)
 		{

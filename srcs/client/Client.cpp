@@ -59,6 +59,8 @@ const std::deque<std::string>&		Client::getResponseQueue() const { return (this-
 
 std::pair<std::string, std::string>	Client::getHostPort() const { return this->_host_port; }
 
+std::string			Client::getRemoteAddress() const { return this->_remote_addr; }
+
 // ------- SETTERS --------
 
 void	Client::setKeepAlive( bool alive ) { this->_keep_alive = alive; }
@@ -78,6 +80,8 @@ bool	Client::isResponseQueueEmpty()	const { return(this->_response_queue.empty()
 const std::string&	Client::frontResponse() const { return(this->_response_queue.front()); }
 
 void	Client::popFrontResponse() { this->_response_queue.pop_front(); }
+
+void	Client::setRemoteAddress(std::string remote_address) { this->_remote_addr = remote_address; }
 
 // --- KEEP ALIVE LOGIC ---
 

@@ -1,4 +1,5 @@
 #include "../../includes/ParseConfig.hpp"
+#include "../../includes/utils.hpp"
 
 //+ ---- Path validation ----
 
@@ -44,14 +45,15 @@ std::string	ParseConfig::getFileText( const char* dir_c )
 			if (pos != std::string::npos)
 			{
 				if (buff[pos] != '#')
+				{
+					buff = cutString(buff, '#');
 					text.append(buff + "\n");
+				}
 			}
 		}
 	}
 	if (text.empty())
 		throw ParseErrException("Error\nEmpty File");
-//	if (!validBrackets(text))
-//		throw ParseErrException("Error\nUnclosed Brackets {}");
 	return (text);
 }
 
@@ -91,9 +93,6 @@ void ParseConfig::tokenizer(std::string fileText)
 			this->_tokens.push_back(token);
 		i = end;
 	}
-	// for (std::vector<std::string>::iterator it = _tokens.begin(); it != _tokens.end(); it++)
-	// 	std::cout << "[" << *it << "] ";
-	std::cout << "\n";
 }
 
 // --------- MAIN LOGIC ---------

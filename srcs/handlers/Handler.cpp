@@ -76,6 +76,7 @@ void	Handler::findServer(const std::vector<ServerConfig> &virtual_servers)
 			if (server_names[j] == name)
 			{
 				this->_my_virtual_server = virtual_servers[i];
+				this->_server_name = name;
 				return ;
 			}
 		}
@@ -90,6 +91,7 @@ void	Handler::findServer(const std::vector<ServerConfig> &virtual_servers)
 			if (server_names[j] == "default_server")
 			{
 				this->_my_virtual_server = virtual_servers[i];
+				this->_server_name = name;
 				return ;
 			}
 		}
@@ -97,7 +99,10 @@ void	Handler::findServer(const std::vector<ServerConfig> &virtual_servers)
 
 	//+ If no match was found set default or thrown if there are no servers
 	if (!virtual_servers.empty())
+	{
 		this->_my_virtual_server = virtual_servers[0];
+		this->_server_name = name;
+	}
 	else
 		throw HttpException(500, "No virtual servers configured");
 }
@@ -232,6 +237,8 @@ const std::string& Handler::getMethod() const { return this->_method; }
 const std::string& Handler::getPath() const { return this->_path; }
 
 bool Handler::hasErrorPage(int code) const { return this->_location.getErrorPages().find(code) != this->_location.getErrorPages().end(); }
+
+const std::string&	Handler::getServerName() const { return (this->_server_name); }
 
 
 // ---------- ERROR PAGES ----------

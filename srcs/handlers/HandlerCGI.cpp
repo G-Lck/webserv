@@ -9,13 +9,6 @@ CgiHandler::~CgiHandler()
 	// kill pid???
 	this->closeStdinFd();
 	this->closeStdoutFd();
-
-	if (this->_env != NULL)
-	{
-		for (size_t i = 0; this->_env[i] != NULL; i++)
-			delete[] this->_env[i];
-		delete[] this->_env;
-	}
 }
 
 void	CgiHandler::closeStdinFd()
@@ -43,7 +36,7 @@ CgiHandler::CgiHandler(Handler const &handler) : Handler(handler)
 	this->_pid = -1;
 	this->_startTime = time(NULL);
 	this->_exitStatus = 0;
-	this->_env = NULL;
+	this->_env[0] = NULL;
 	this->_writeOffset = 0;
 }
 
@@ -77,10 +70,39 @@ void	CgiHandler::validateCgi()
 
 void	CgiHandler::setEnvVars()
 {
-	std::vector<std::string> ev;
+	std::vector<std::string>	env;
+	HttpRequest 				req = this->getClient()->getRequest();
 
+	//+ Hard-coded ones
+	env.push_back("SERVER_PROTOCOL=HTTP/1.1");
+	env.push_back("SERVER_SOFTWARE=webserv/1.0");
+	env.push_back("GATEWAY_INTERFACE=CGI/1.1");
 
+	//+ From HttpRequest
+	env.push_back("REQUEST_METHOD=" + req.getMethod());
+	env.push_back("QUERY_STRING=" + req.getQueryString());
+	env.push_back("CONTENT_TYPE=" + req.getHeaders().find("Content-Type")->second);
+	env.push_back("CONTENT_LENGTH=" + req.getHeaders().find("Content-Length")->second);
+	// SCRIPT_NAME / PATH_INFO ← derived by splitting getPath() against the CGI location's 
+	//		extension match (not stored on HttpRequest as-is — you compute it in the CGI handler)
+	
+	//+ ServerConfig matches
+	env.push_back("SERVER_NAME=" + this->getServerName());
+	env.push_back("SERVER_PORT=" + this->getClient()->getHostPort().second);
+
+	//+ From socket/connection
+	// REMOTE_ADDR ← client's sockaddr (from your Socket/connection object)
+	env.push_back("REMOTE_ADDR=" + this->getClient()->getRemoteAddress());
+	// REMOTE_HOST — skip, not doing reverse DNS
+	// AUTH_TYPE, REMOTE_USER, REMOTE_IDENT — skip, no auth implemented
+
+	std::vector<char*> envp;
+	for (size_t i = 0; i < env.size(); i++)
+		envp.push_back(const_cast<char*>(env[i].c_str()));
+	envp.push_back(NULL);
 }
+
+
 
 void	CgiHandler::openPipe()
 {
@@ -142,7 +164,7 @@ size_t	CgiHandler::getWriteOffset() const { return this->_writeOffset; }
 
 const std::string&	CgiHandler::getReadBuffer() const { return this->_readBuffer; }
 
-char**	CgiHandler::getEnv() const { return this->_env; }
+std::vector<char*>	CgiHandler::getEnv() const { return this->_env; }
 
 time_t	CgiHandler::getStartTime() const { return this->_startTime; }
 

@@ -109,6 +109,15 @@ bool validListen(const std::string &token)
 	return true;
 }
 
+std::string	cutString(std::string str, char c)
+{
+	std::string::size_type pos = str.find(c);
+	if (pos != std::string::npos)
+		return (str.substr(0, pos));
+	else
+		return str;
+}
+
 bool	validMethod( std::string method )
 {
 	if ( method.compare("GET") == 0 ||

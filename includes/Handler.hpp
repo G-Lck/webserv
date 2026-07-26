@@ -18,6 +18,8 @@ class Handler
 		LocationConfig				_location;
 		std::string					_method;
 		std::string					_path;
+		std::string					_server_name;
+		std::string					_port;
 
 		//+ ------ FIRST PARSING ------
 		void	checkDotsPath();
@@ -51,6 +53,7 @@ class Handler
 		const LocationConfig&	getLocation() const;
 		const std::string&		getMethod() const;
 		const std::string&		getPath() const;
+		const std::string&		getServerName() const;
 		bool					hasErrorPage(int code) const;
 
 		std::string				getErrorPageContent(int code) const;

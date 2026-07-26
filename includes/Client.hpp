@@ -17,6 +17,7 @@ class Client
 		std::deque<std::string>				_response_queue;
 		time_t 								_last_activity;
 		bool								_keep_alive;
+		std::string							_remote_addr;
 
 	public:
 
@@ -34,7 +35,8 @@ class Client
 	time_t								getLastActivity()	const;
 	int									getFd()				const;
 	std::pair<std::string, std::string>	getHostPort() 		const;
-	bool								getKeepAlive() const;
+	bool								getKeepAlive()		const;
+	std::string							getRemoteAddress()	const;
 
 	void				appendToReadBuffer(const char* data, size_t len);
 	void				appendToWriteBuffer(const std::string& data);
@@ -53,6 +55,7 @@ class Client
 	void				popFrontResponse();
 	void				closeFd(void);
 	bool				isWriteBufferEmpty() const;
+	void				setRemoteAddress(std::string remote_address);
 
 	void				setKeepAlive( bool alive );
 	void				wantsKeepAlive();
