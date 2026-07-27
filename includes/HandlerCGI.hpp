@@ -5,6 +5,7 @@
 #include "WebServ.hpp"
 #include "ParseConfig.hpp"
 
+/*
 class CgiHandler : public Handler
 {
 	private:
@@ -63,4 +64,5 @@ class CgiHandler : public Handler
 
 std::ostream &operator<<(std::ostream &out, CgiHandler const &cgi);
 
+*/
 #endif

@@ -14,6 +14,7 @@ HttpRequest& HttpRequest::operator=(const HttpRequest& other) {
 		this->_headers = other._headers;
 		this->_body = other._body;
 		this->_consumed_bytes = other._consumed_bytes;
+		this->_global_max_body = other._global_max_body;
 	}
 	return *this;
 }

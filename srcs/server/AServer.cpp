@@ -278,40 +278,19 @@ bool	AServer::handleCompleteRequest(int fd)
 	}
 
 	//+ Select type of Handler according to the request
-	CgiHandler*	cgi = NULL;
 	try
 	{
 		//+ Static Handler: always a response ready even if it fails. So we return after
-		if (!handler.isCGI())
-		{
 			//handler.executeStatic(); //* this may throw (only if you dont find the error page inside location)
 			//single_response = handler->client->_response.buildResponseStr();
 			single_response = process_and_build_response(c);
 			finishRequestCycle(c); //+ Cleanup http request
 			this->prepareToSend(fd, c, single_response);
 			return true;
-		}
 		//+ Cgi Handler: We init the allocated CgiHandler, if it throws, the catch deletes it and send the response
 		//+ On success, we create the handler, the child process and go back to the main loop to check for write to the cgi
-		else
-		{
-			cgi = new CgiHandler(handler);
-			try
-			{
-				cgi->validateCgi();	//*this may throw
-				cgi->openPipe();	//*this may throw
-			}
-			catch(const HttpException&)
-			{
-				delete cgi; //* Still need to check for a safe destructor por the kill(pid)
-				throw ;
-			}
-			this->addCgiToMap(cgi->getStdoutFd(), cgi);
-			//* Still need to add to multiplexer
-			cgi->setStartTime();
-			finishRequestCycle(c); //+ Cleanup response class, everything was read
-			return false;
-		}
+	
+
 	}
 	catch(const HttpException& e)
 	{
@@ -452,18 +431,6 @@ void	AServer::clientDisconnect(int fd)
 	}
 }
 
-void	AServer::cgiDisconnect(int fd)
-{
-	this->removeFdFromMultiplexer(fd);
-
-	std::map<int, CgiHandler*>::iterator it = this->_cgi_handlers.find(fd);
-	if (it != this->_cgi_handlers.end())
-	{
-		delete it->second;
-		this->_cgi_handlers.erase(it);
-	}
-}
-
 /// @brief	Close and delete all remaining clients.
 ///			Iterate in the map of Cliets, closing the fd and freeing the memory
 void	AServer::closeClients(void)
@@ -490,30 +457,6 @@ void	AServer::closeSockets(void)
 		++it;
 	}
 	this->_sockets.clear();
-}
-
-
-// --------------- CGI RELATED FUNCTIONS ---------------
-
-
-CgiHandler	*AServer::getCgiHandler(int fd) const
-{
-	std::map<int, CgiHandler*>::const_iterator it = this->_cgi_handlers.find(fd);
-	if (it == this->_cgi_handlers.end())
-		return NULL;
-	return it->second;
-}
-
-void	AServer::addCgiToMap(int fd, CgiHandler *handler) { this->_cgi_handlers[fd] = handler; }
-
-void	AServer::removeCgiFromMap(int fd) { if(getCgiHandler(fd) != NULL) {this->_cgi_handlers.erase(fd);} }
-
-bool	AServer::fdIsCgi(int fd) const
-{
-	std::map<int, CgiHandler*>::const_iterator it = this->_cgi_handlers.find(fd);
-	if (it == this->_cgi_handlers.end())
-        return false;
-    return true;
 }
 
 
@@ -562,33 +505,3 @@ void	AServer::monitorClients()
 	}
 }
 
-void	AServer::monitorCGI()
-{
-	std::map<int, CgiHandler*>::iterator it = this->_cgi_handlers.begin();
-	while (it != this->_cgi_handlers.end())
-	{
-		std::map<int, CgiHandler*>::iterator next = it;
-		++next;
-		if (it->second->cgiTimeout())
-		{
-			//+ Log
-			std::ostringstream oss;
-			oss << *(it->second) << " --> CGI Timeout";
-			writeLog(oss.str(), SERVER_EVENTS);
-
-			//+ Send response timeout
-			// if (i have error page)
-			// {
-			//~ HERE WE MISS A FUNCTION TO EIRTHER GET THE PAGE FROM LOCATION
-			//~ OR CALL:
-			// }
-			// else
-			std::string single_response = HttpException(504, " Cgi Timeout").getResponseStr();
-			this->prepareToSend(it->second->getClient()->getFd(), it->second->getClient(), single_response);
-
-			//+ Kill Cgi
-			this->cgiDisconnect(it->first);
-		}
-		it = next;
-	}
-}

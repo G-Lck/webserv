@@ -79,14 +79,9 @@ void	EpollServer::run(void)
 		for (int i = 0; i < fd_count; ++i)
 		{
 			int current_fd = this->_active_events[i].data.fd;
-			// Cases:
-			if (this->fdIsCgi(current_fd))
-			{
-				handleCgiEvent(current_fd, this->_active_events[i].events);
-			}
 			// current_fd matches a listening socket: a new client
 			// connection is waiting to be accepted
-			else if (this->fdMatch(current_fd))
+			if (this->fdMatch(current_fd))
 			{
 				if (!this->addNewClient(current_fd))
 					continue;
@@ -107,7 +102,6 @@ void	EpollServer::run(void)
 			}
 		}
 		monitorClients(); //+ Check again all, case for when an active event
-		monitorCGI();
 	}
 }
 
@@ -164,28 +158,6 @@ void	EpollServer::closeEpoll(void)
 	if (this->_epoll_fd != -1)
 		close(this->_epoll_fd);
 	this->_epoll_fd = -1;
-}
-
-void	EpollServer::handleCgiEvent(int fd, uint32_t epoll_event)
-{
-	CgiHandler* cgi = this->getCgiHandler(fd);
-	
-	if (cgi == NULL)
-	{
-		return ; //*should not happen, safety check, log?
-	}
-    if (epoll_event & EPOLLOUT && fd == cgi->getStdinFd())
-	{
-		cgi->continueWriting(); //* check?
-	}
-	else if (epoll_event & EPOLLIN && fd == cgi->getStdoutFd())
-	{
-		cgi->continueReading(); //* check?
-	}
-	if (cgi->isFinished())
-	{
-    	//cleanup: erase fd(s) from AServer's cgi map, delete handler
-	}
 }
 
 #else

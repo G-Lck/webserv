@@ -2,6 +2,7 @@
 
 // ---------- ORTHODOX ----------
 
+/*
 CgiHandler::CgiHandler() : _pid(-1), _stdinFd(-1), _stdoutFd(-1), _finished(false), _startTime(time(NULL)) { }
 
 CgiHandler::~CgiHandler()
@@ -112,14 +113,14 @@ void	CgiHandler::openPipe()
 // ---------- REQUEST/RESPONSE PROCESING ----------
 
 
-/*
+
 * What the response needs
 _status_code
 _status_message
 _headers
 _body
 _connection
-*/
+
 
 void	CgiHandler::continueReading()
 {
@@ -189,3 +190,5 @@ bool	CgiHandler::cgiTimeout()
 		return (true);
 	return(false);
 }
+
+*/

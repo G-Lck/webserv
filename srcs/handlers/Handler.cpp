@@ -34,6 +34,7 @@ Handler::~Handler() {}
 ///			cgi_path set in the LocationConfig for the running virtual sever.
 /// @return If the location is not empty, and it matches with the one in location config, it will
 ///			return true, otherwise returns false.
+/*
 bool	Handler::isCGI() const
 {
     const std::string &cgi_path = this->_location.getCgiHandler().first;
@@ -45,6 +46,8 @@ bool	Handler::isCGI() const
     	return true;
 	return (false);
 }  //~ CHECK THIS
+
+*/
 
 // ---------- SETUP/PARSE FUNCTIONS ----------
 
@@ -256,4 +259,7 @@ std::string	Handler::getErrorPageContent(int code) const
 
 	// read entire file into a string
 	// return that string
+	if (code != 0)
+		return ("<h1>HELLO<h1>");
+	return ("<h1>HELLO<h1>");
 }
