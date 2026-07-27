@@ -12,7 +12,7 @@ int	main( int ac, char **av )
 		std::cout << "Wrong amount of parameters\nUsage: ./WebServ + [dir-to-config-file]. \nOr Flag --test-config to test parsing" << std::endl;
 		return (-1);
 	}
-	
+	signal(SIGCHLD, SIG_IGN);
 	bool testMode = (ac >= 3 && std::string(av[2]) == "--test-config");
 	GlobalConfig	Config;
 	

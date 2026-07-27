@@ -15,7 +15,7 @@ class	PollServer: public AServer
 
 		//+ --- Internal functionality ---
 		void	clearPollState(void);
-		bool	addClientToMultiplexer( int fd );
+		bool	addFdToMultiplexer( int fd );
 		void	removeFdFromMultiplexer( int fd );
 		void	watchForRead( int fd );
 		void	watchForWrite( int fd );

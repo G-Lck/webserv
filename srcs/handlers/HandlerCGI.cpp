@@ -2,41 +2,44 @@
 
 // ---------- ORTHODOX ----------
 
-CgiHandler::CgiHandler() : _pid(-1), _stdinFd(-1), _stdoutFd(-1), _finished(false), _startTime(time(NULL)) { }
+CgiHandler::CgiHandler() : _pid(-1), _parentFdIn(-1), _parentFdOut(-1), _childFdOut(-1), _childFdIn(-1), _finished(false), _startTime(time(NULL)) {}
 
 CgiHandler::~CgiHandler()
 {
-	// kill pid???
-	this->closeStdinFd();
-	this->closeStdoutFd();
+	this->closeAllFd();
+	this->killCgi();
 }
 
-void	CgiHandler::closeStdinFd()
+void	CgiHandler::killCgi()
 {
-	if (this->_stdinFd != -1)
-		close(this->_stdinFd);
-	this->_stdinFd = -1;
+    if (_pid == -1)
+        return;
+	
+    // Ignore errors if the process already exited.
+    kill(this->_pid, SIGKILL);
+    
+	this->_pid = -1;
 }
 
-void	CgiHandler::closeStdoutFd()
+void	CgiHandler::closeAllFd()
 {
-	if (this->_stdoutFd != -1)
-		close(this->_stdoutFd);
-	this->_stdoutFd = -1;
+	close(this->_childFdIn);
+	close(this->_childFdOut);
+	close(this->_parentFdIn);
+	close(this->_parentFdOut);
 }
-
 
 CgiHandler::CgiHandler(Handler const &handler) : Handler(handler)
 {
 	this->_client = handler.getClient();
 	this->_scriptPath = handler.getPath();
-	this->_stdinFd = -1;
-	this->_stdoutFd = -1;
+	this->_parentFdIn = -1;
+	this->_parentFdOut = -1;
 	this->_finished = false;
 	this->_pid = -1;
 	this->_startTime = time(NULL);
 	this->_exitStatus = 0;
-	this->_env[0] = NULL;
+	this->_env.push_back(NULL);
 	this->_writeOffset = 0;
 }
 
@@ -51,6 +54,7 @@ std::ostream &operator<<(std::ostream &out, CgiHandler const &cgi)
 
 	out << "Cgi Handler: pid[" << cgi.getPid() << "] - On Client [" << cgi.getClient()->getFd() << "] - ";
 	out << "script-path: " << cgi.getScriptPath() << " Time of start: " << t;
+	return out;
 }
 
 // ---------- SETUP AND INIT ----------
@@ -71,7 +75,7 @@ void	CgiHandler::validateCgi()
 void	CgiHandler::setEnvVars()
 {
 	std::vector<std::string>	env;
-	HttpRequest 				req = this->getClient()->getRequest();
+	HttpRequest 				req = this->getRequestHandler();
 
 	//+ Hard-coded ones
 	env.push_back("SERVER_PROTOCOL=HTTP/1.1");
@@ -83,8 +87,8 @@ void	CgiHandler::setEnvVars()
 	env.push_back("QUERY_STRING=" + req.getQueryString());
 	env.push_back("CONTENT_TYPE=" + req.getHeaders().find("Content-Type")->second);
 	env.push_back("CONTENT_LENGTH=" + req.getHeaders().find("Content-Length")->second);
-	// SCRIPT_NAME / PATH_INFO ← derived by splitting getPath() against the CGI location's 
-	//		extension match (not stored on HttpRequest as-is — you compute it in the CGI handler)
+	env.push_back("SCRIPT_NAME=" + splitPath(0));
+	env.push_back("PATH_INFO=" + splitPath(1));
 	
 	//+ ServerConfig matches
 	env.push_back("SERVER_NAME=" + this->getServerName());
@@ -96,17 +100,114 @@ void	CgiHandler::setEnvVars()
 	// REMOTE_HOST — skip, not doing reverse DNS
 	// AUTH_TYPE, REMOTE_USER, REMOTE_IDENT — skip, no auth implemented
 
+	//+ Populate
 	std::vector<char*> envp;
 	for (size_t i = 0; i < env.size(); i++)
 		envp.push_back(const_cast<char*>(env[i].c_str()));
 	envp.push_back(NULL);
 }
 
-
+std::string	CgiHandler::splitPath(int flag)
+{
+	std::string ext = this->_location.getCgiHandler().first;
+	size_t pos = this->getPath().find(ext);
+	if (pos != std::string::npos)
+	{
+		pos += ext.size();
+		if (flag == 0)
+			return (this->getPath().substr(0, pos));
+		else
+			return (this->getPath().substr(pos));
+	}
+	else
+	{
+		if (flag == 0)
+			return (this->getPath());
+		else
+			return ("");
+	}
+}
 
 void	CgiHandler::openPipe()
 {
+	try
+	{
+		validateCgi();
+	}
+	catch(const HttpException& e)
+	{
+		throw ;
+	}
+	setEnvVars();
+	
+    int fd_res[2], fd_req[2];
 
+    //+ error checking for pipe
+    if (pipe(fd_res) < 0 || pipe(fd_req) < 0)
+	{
+		std::stringstream err;
+		err << "pipe err: " << strerror(errno);
+		writeLog(err.str(), ERROR_INFO);
+		close(fd_res[0]);
+		close(fd_res[1]);
+		close(fd_req[0]);
+		close(fd_req[1]);
+		throw HttpException(500, "Pipe error in CgiHandler::openPipe()");
+	}
+	this->_parentFdOut = fd_req[1];
+	this->_parentFdIn = fd_res[0];
+	this->_childFdIn = fd_req[0];
+	this->_childFdOut = fd_res[1];
+
+    //+ error checking for fcntl
+    if (fcntl(fd_res[0], F_SETFL, O_NONBLOCK) < 0 || fcntl(fd_req[0], F_SETFL, O_NONBLOCK) < 0 ||
+			fcntl(fd_res[1], F_SETFL, O_NONBLOCK) < 0 || fcntl(fd_req[1], F_SETFL, O_NONBLOCK) < 0)
+	{
+		std::stringstream err;
+		err << "fnctl err: " << strerror(errno);
+		writeLog(err.str(), ERROR_INFO);
+		closeAllFd();
+		throw HttpException(500, "fnctl error in CgiHandler::openPipe()");
+	}
+
+   	this->_pid = fork();
+	if (this->_pid == -1)
+	{
+		std::stringstream err;
+		err << "fork err: " << strerror(errno);
+		writeLog(err.str(), ERROR_INFO);
+		closeAllFd();
+		throw HttpException(500, "fork error in CgiHandler::openPipe()");
+	}
+
+	if (this->_pid == 0)
+	{
+		// close the other end
+		if (dup2(this->_childFdIn, STDIN_FILENO) == -1)
+		{
+			closeAllFd();
+			exit(-1);
+		}
+		// close he other end
+		if (dup2(this->_childFdOut, STDOUT_FILENO) == -1)
+		{
+			closeAllFd();
+			exit(-1);
+		}
+		//~ CHECK IF WE NEED TO CLOSE ALL FD NOW OR NOT
+		//EXECUTE THE CGI
+		char *buff[10000];
+		read(STDIN_FILENO, buff, 100);
+		std::cout << "Buffer says: " << buff << std::endl;
+		exit(1);
+	}
+	else
+	{
+		close(this->_childFdIn);
+		close(this->_childFdOut);
+	}
+	// add to epoll the write fd and set to epoll out
+	//startWriting();                                                                                                  
 }
 
 // ---------- REQUEST/RESPONSE PROCESING ----------
@@ -123,11 +224,11 @@ _connection
 
 void	CgiHandler::continueReading()
 {
+	// refresh client and cgi time
     //     read available data from fd into handler's read buffer
     //     if read returns 0 (EOF):
     //         mark cgi output finished
     //         close stdout fd, remove from epoll
-    //         waitpid on handler's pid (non-blocking check or already reaped by monitorCgi)
     //         build HTTP response from read buffer
     //         attach response to handler's _client
     //         re-arm client fd for EPOLLOUT
@@ -137,14 +238,16 @@ void	CgiHandler::continueReading()
 
 void	CgiHandler::switchToRead()
 {
-	
+	// remove from multiplexer, change the int fd in the map of AServer, close both ends of that pipe 
+	// add to multiplexer the read end and set to epoll in
 }
 
 void	CgiHandler::continueWriting()
 {
+	// refresh client and cgi time
 	//     write next chunk of handler's write buffer to fd
     //     if all body written:
-    //         close stdin fd, remove from epoll, mark handler side done
+			// switchToRead();
 }
 
 
@@ -152,9 +255,9 @@ void	CgiHandler::continueWriting()
 
 pid_t	CgiHandler::getPid() const { return this->_pid; }
 
-int	CgiHandler::getStdinFd() const { return this->_stdinFd; }
+int	CgiHandler::getStdinFd() const { return this->_parentFdIn; }
 
-int	CgiHandler::getStdoutFd() const { return this->_stdoutFd; }
+int	CgiHandler::getStdoutFd() const { return this->_parentFdOut; }
 
 bool	CgiHandler::isFinished() const { return this->_finished; }
 

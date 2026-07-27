@@ -3,7 +3,8 @@
 
 #include "WebServ.hpp"
 #include "HttpRequest.hpp"
-#include "HandlerCGI.hpp"
+
+class CgiHandler;
 
 class Client
 {

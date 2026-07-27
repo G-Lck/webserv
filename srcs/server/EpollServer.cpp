@@ -111,16 +111,16 @@ void	EpollServer::run(void)
 	}
 }
 
-/// @brief	This function will try to add an fd to the client_ev inside epoll
+/// @brief	This function will try to add an fd to the event inside epoll
 ///			if epoll_ctl call fails, an error will be logged.
 /// @param fd The fd to add
 /// @return True if it managed to add the client correctly
-bool	EpollServer::addClientToMultiplexer( int fd )
+bool	EpollServer::addFdToMultiplexer( int fd )
 {
-	struct epoll_event client_ev;
-	client_ev.events = EPOLLIN;
-	client_ev.data.fd = fd;
-	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, fd, &client_ev) == -1)
+	struct epoll_event event;
+	event.events = EPOLLIN;
+	event.data.fd = fd;
+	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, fd, &event) == -1)
 	{
 		writeLog(getEpollCtlErrorStr(errno), ERROR_INFO);
 		return false;
@@ -202,7 +202,7 @@ void	EpollServer::run(void)
 	throw runtimeEpollServerException("Epoll is not available on this platform.");
 }
 
-bool	EpollServer::addClientToMultiplexer( int ) {return true;}
+bool	EpollServer::addFdToMultiplexer( int ) {return true;}
 
 void	EpollServer::removeFdFromMultiplexer( int ) {}
 

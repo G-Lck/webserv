@@ -1,5 +1,8 @@
 #include "../../includes/WebServ.hpp"
 
+/// @brief This function will log: [time] + [your-msg] inside the log file selected tiwh the flag
+/// @param msg The message to add
+/// @param flag INFO | STATUS_CODE | ACCESS | SERVER_EVENTS | ERROR_INFO | ERROR_WARNING
 void	writeLog( const std::string msg, int flag )
 {
 	time_t	now;

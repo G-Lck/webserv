@@ -6,7 +6,8 @@ Handler::Handler() {}
 
 Handler::Handler(Client* client): _client(client)
 {
-	this->_http_request = this->_client->getRequest();
+	HttpRequest req = client->getRequest(); 
+	this->_http_request = req;
 }
 
 Handler::Handler(const Handler& other) { *this = other; }
@@ -191,7 +192,7 @@ void	Handler::validateStatic()
 ///			And also compares with the size of the body to actually match
 bool	Handler::validContentLength()
 {
-	const std::map<std::string, std::string> headers = this->getHttpRequest().getHeaders();
+	const std::map<std::string, std::string> headers = this->getRequestHandler().getHeaders();
 	std::map<std::string, std::string>::const_iterator it = headers.find("Content-Length");
 
 	if (it == headers.end()) //+ Extra check if not found (we check that in the parser anyways)
@@ -199,7 +200,7 @@ bool	Handler::validContentLength()
 
 	size_t content_length = std::atoi(it->second.c_str()); //+ Get the length set in the header
 
-	if (content_length != this->getHttpRequest().getBody().size()
+	if (content_length != this->getRequestHandler().getBody().size()
 		|| content_length > (size_t)this->getLocation().getClientMaxBodySize())
 		return false; //+ Check if size is not bigger than location or matches with the actual body
 	return (true);
@@ -213,7 +214,7 @@ bool	Handler::validMethod()
 	
 	while (it != allowed_methods.end())
 	{
-		if (*it == this->_client->getRequest().getMethod())
+		if (*it == this->getRequestHandler().getMethod())
 			return true;
 		it++;
 	}
@@ -226,7 +227,7 @@ bool	Handler::validMethod()
 
 Client* Handler::getClient() const { return this->_client; }
 
-const HttpRequest& Handler::getHttpRequest() const { return this->_http_request; }
+const HttpRequest& Handler::getRequestHandler() const { return this->_http_request; }
 
 const ServerConfig& Handler::getVirtualServer() const { return this->_my_virtual_server; }
 
@@ -256,4 +257,6 @@ std::string	Handler::getErrorPageContent(int code) const
 
 	// read entire file into a string
 	// return that string
+	(void)code;
+	return "";
 }

@@ -99,7 +99,7 @@ void	PollServer::run(void)
 	}
 }
 
-bool	PollServer::addClientToMultiplexer( int fd )
+bool	PollServer::addFdToMultiplexer( int fd )
 {
 	struct pollfd pfd;
 	pfd.fd = fd;

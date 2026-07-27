@@ -48,7 +48,7 @@ class Handler
 
 		//+ ------ GETTERS ------
 		Client*					getClient() const;
-		const HttpRequest&		getHttpRequest() const;
+		const HttpRequest&		getRequestHandler() const;
 		const ServerConfig&		getVirtualServer() const;
 		const LocationConfig&	getLocation() const;
 		const std::string&		getMethod() const;

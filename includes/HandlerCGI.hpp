@@ -1,16 +1,18 @@
 #ifndef HANDLERCGI_HPP
 #define HANDLERCGI_HPP
 
-#include "Handler.hpp"
 #include "WebServ.hpp"
 #include "ParseConfig.hpp"
+#include "Handler.hpp"
 
 class CgiHandler : public Handler
 {
 	private:
 		pid_t				_pid;			// Child process id, for waitpid/kill.
-		int					_stdinFd;		// Write end of the pipe (set to -1 when already closed)
-		int					_stdoutFd;		// Read end of the pipe (set to -1 when already closed)
+		int					_parentFdIn;		// Write end of the pipe (set to -1 when already closed)
+		int					_parentFdOut;		// Read end of the pipe (set to -1 when already closed)
+		int					_childFdOut;
+		int					_childFdIn;
 		bool				_finished;		// For disconnectCGI/timeout logic avoiding double-kill/double-reap.
 		std::string			_writeBuffer;	// Body sent to the child
 		size_t				_writeOffset;	// Body bytes alredy sent count
@@ -21,8 +23,9 @@ class CgiHandler : public Handler
 		std::string			_scriptPath;	// Resolved path to the CGI executable, needed at execve time.
 		Client*				_client;		// To attach the eventual response to the right client once done.
 
-		CgiHandler(CgiHandler const &other);
 		CgiHandler& operator=(CgiHandler const &other);
+		std::string	splitPath(int flag);
+		CgiHandler(CgiHandler const &other);
 	public:
 		CgiHandler();
 		~CgiHandler();
@@ -57,8 +60,8 @@ class CgiHandler : public Handler
 		bool	cgiTimeout();
 
 		//+ Clean up
-		void	closeStdinFd();
-		void	closeStdoutFd();
+		void	closeAllFd();
+		void	killCgi();
 };
 
 std::ostream &operator<<(std::ostream &out, CgiHandler const &cgi);

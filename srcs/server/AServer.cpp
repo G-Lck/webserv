@@ -128,7 +128,7 @@ bool	AServer::addNewClient(int curr_socket_fd)
 	this->_clients.insert(std::make_pair(fd_client, newClient));
 
 	// Try to add this fd to epoll
-	if(!addClientToMultiplexer(fd_client))
+	if(!addFdToMultiplexer(fd_client))
 	{
 		delete newClient;
 		close(fd_client);
@@ -142,6 +142,16 @@ bool	AServer::addNewClient(int curr_socket_fd)
 
 // ---------------  READING  ---------------
 
+static void logReadRequest(Client *c)
+{
+	std::stringstream ss;
+	ss << (*c) << " -> Complete request recieved";
+	writeLog(ss.str(), SERVER_EVENTS); //+ Log request
+	
+	std::stringstream sss;
+	sss << c->getRequest();
+	writeLog(sss.str(), ACCESS);
+}
 /// @brief	This function will call recv, and either handle the errors
 ///			or on success:
 ///			Case 1: The request is not yet complete:
@@ -194,32 +204,29 @@ void    AServer::readRequest(int fd)
 		Client* c = it->second;
 		c->appendToReadBuffer(buffer, bytes_read);
 
-		try
+		while (1)
 		{
-			while (c->parseBufferedRequest() == true)
+			try
+			{
+				//+ If no response fully read, we go to main server loop				
+				if (c->parseBufferedRequest() == false)
+					break;
+				//+ Log
+				logReadRequest(c);
+				//+ Else process the request or init cgi
+				if (!this->handleCompleteRequest(fd))
+					continue ;
+			}
+			catch(const HttpException& e)
 			{
 				std::stringstream ss;
-				ss << (*c) << " -> Complete request recieved";
-				writeLog(ss.str(), SERVER_EVENTS); //+ Log request
-				
-				std::stringstream sss;
-				sss << c->getRequest();
-				writeLog(sss.str(), ACCESS);
-
-				//+ This case is CGI init, no reponse created
-				if (!this->handleCompleteRequest(fd))
-					break ;
+				ss << e.getCode() << ": " << e.what();
+				writeLog(ss.str(), STATUS_CODE);
+				//~ HERE WE MISS A FUNCTION TO EIRTHER GET THE PAGE FROM LOCATION
+				//~ OR CALL:
+				finishRequestCycle(c); //+ Cleanup http request
+				this->prepareToSend(fd, c, e.getResponseStr());
 			}
-		}
-		catch (const HttpException& e)
-		{
-			std::stringstream ss;
-			ss << e.getCode() << ": " << e.what();
-			writeLog(ss.str(), STATUS_CODE);
-			//~ HERE WE MISS A FUNCTION TO EIRTHER GET THE PAGE FROM LOCATION
-			//~ OR CALL:
-			finishRequestCycle(c); //+ Cleanup http request
-			this->prepareToSend(fd, c, e.getResponseStr());
 		}
 	}
 }
@@ -298,7 +305,6 @@ bool	AServer::handleCompleteRequest(int fd)
 			cgi = new CgiHandler(handler);
 			try
 			{
-				cgi->validateCgi();	//*this may throw
 				cgi->openPipe();	//*this may throw
 			}
 			catch(const HttpException&)
@@ -307,9 +313,9 @@ bool	AServer::handleCompleteRequest(int fd)
 				throw ;
 			}
 			this->addCgiToMap(cgi->getStdoutFd(), cgi);
-			//* Still need to add to multiplexer
+			this->addFdToMultiplexer(cgi->getStdoutFd());
 			cgi->setStartTime();
-			finishRequestCycle(c); //+ Cleanup response class, everything was read
+			finishRequestCycle(c); //+ Cleanup request class, everything was read
 			return false;
 		}
 	}
@@ -591,4 +597,7 @@ void	AServer::monitorCGI()
 		}
 		it = next;
 	}
+	// Reap any exited CGI processes [WNOHANG].
+    while (waitpid(-1, NULL, WNOHANG) > 0) //+ this checks for reaping all childs killed.
+        ;
 }
