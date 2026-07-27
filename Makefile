@@ -11,7 +11,7 @@ SRC = 	main.cpp \
 		srcs/config/LocationConfig.cpp \
 		srcs/handlers/Handler.cpp \
 		srcs/handlers/HandlerCGI.cpp \
-		src/handlers/StaticHandler.cpp \
+		srcs/handlers/StaticHandler.cpp \
 		srcs/parse/ParseConfig.cpp \
 		srcs/requests/HttpException.cpp \
 		srcs/requests/HttpRequest.cpp \
