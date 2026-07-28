@@ -199,6 +199,7 @@ void	EpollServer::handleCgiEvent(int fd, uint32_t epoll_event)
 	}
 	else if ((epoll_event & EPOLLIN || epoll_event & EPOLLHUP) && fd == cgi->getParentFdIn())
 	{
+		//~ IF EPOLLHUP CHECK FOR ERRORS, RETURN CODE
 		cgi->continueReading(); //* check?
 	}
 	if (cgi->isFinished())
