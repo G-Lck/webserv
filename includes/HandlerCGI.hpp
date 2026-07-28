@@ -13,6 +13,7 @@ class CgiHandler : public Handler
 		int					_parentFdOut;		// Read end of the pipe (set to -1 when already closed)
 		int					_childFdOut;
 		int					_childFdIn;
+		bool				_finishedWritting;
 		bool				_finished;		// For disconnectCGI/timeout logic avoiding double-kill/double-reap.
 		std::string			_writeBuffer;	// Body sent to the child
 		size_t				_writeOffset;	// Body bytes alredy sent count
@@ -39,13 +40,14 @@ class CgiHandler : public Handler
 		void	openPipe();
 		void	continueReading();
 		void	continueWriting();
-		void	switchToRead();
+		void	closeParentFdOut();
 
 		//+ Getters
 		pid_t				getPid() const;
-		int					getStdinFd() const;
-		int					getStdoutFd() const;
+		int					getParentFdIn() const;
+		int					getParentFdOut() const;
 		bool				isFinished() const;
+		bool				finishedWriting() const;
 		const std::string&	getWriteBuffer() const;
 		size_t				getWriteOffset() const;
 		const std::string&	getReadBuffer() const;
@@ -56,12 +58,15 @@ class CgiHandler : public Handler
 		Client*				getClient() const;
 
 		//+ Monitoring
-		void	setStartTime();
+		void	updateCgiTime();
 		bool	cgiTimeout();
 
 		//+ Clean up
 		void	closeAllFd();
 		void	killCgi();
+
+		//+ Testing
+		void	setWriteBuffer(std::string str);
 };
 
 std::ostream &operator<<(std::ostream &out, CgiHandler const &cgi);

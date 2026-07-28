@@ -2,7 +2,7 @@
 
 // ---------- ORTHODOX ----------
 
-CgiHandler::CgiHandler() : _pid(-1), _parentFdIn(-1), _parentFdOut(-1), _childFdOut(-1), _childFdIn(-1), _finished(false), _startTime(time(NULL)) {}
+CgiHandler::CgiHandler() : _pid(-1), _parentFdIn(-1), _parentFdOut(-1), _childFdOut(-1), _childFdIn(-1), _finishedWritting(false), _finished(false), _startTime(time(NULL)) {}
 
 CgiHandler::~CgiHandler()
 {
@@ -72,8 +72,9 @@ void	CgiHandler::validateCgi()
 
 void	CgiHandler::setEnvVars()
 {
-	std::vector<std::string>	env;
-	HttpRequest 				req = this->getRequestHandler();
+	std::vector<std::string>							env;
+	HttpRequest 										req = this->getRequestHandler();
+	std::map<std::string, std::string>::const_iterator	h_it;	
 
 	//+ Hard-coded ones
 	env.push_back("SERVER_PROTOCOL=HTTP/1.1");
@@ -83,8 +84,13 @@ void	CgiHandler::setEnvVars()
 	//+ From HttpRequest
 	env.push_back("REQUEST_METHOD=" + req.getMethod());
 	env.push_back("QUERY_STRING=" + req.getQueryString());
-	env.push_back("CONTENT_TYPE=" + req.getHeaders().find("Content-Type")->second);
-	env.push_back("CONTENT_LENGTH=" + req.getHeaders().find("Content-Length")->second);
+
+	h_it = req.getHeaders().find("Content-Type");
+	if (h_it != req.getHeaders().end())
+		env.push_back("CONTENT_TYPE=" + h_it->second);
+	h_it = req.getHeaders().find("Content-Length");
+	if (h_it != req.getHeaders().end())
+		env.push_back("CONTENT_LENGTH=" + h_it->second);
 	env.push_back("SCRIPT_NAME=" + splitPath(0));
 	env.push_back("PATH_INFO=" + splitPath(1));
 	
@@ -179,32 +185,45 @@ void	CgiHandler::openPipe()
 
 	if (this->_pid == 0)
 	{
-		// close the other end
 		if (dup2(this->_childFdIn, STDIN_FILENO) == -1)
 		{
 			closeAllFd();
 			exit(-1);
 		}
-		// close he other end
 		if (dup2(this->_childFdOut, STDOUT_FILENO) == -1)
 		{
 			closeAllFd();
 			exit(-1);
 		}
+		closeAllFd();
 		//~ CHECK IF WE NEED TO CLOSE ALL FD NOW OR NOT
+		// pass env var
 		//EXECUTE THE CGI
-		char *buff[10000];
-		read(STDIN_FILENO, buff, 100);
-		std::cout << "Buffer says: " << buff << std::endl;
-		exit(1);
+
+		// build argv
+		char *argv[] = {
+			const_cast<char*>("/usr/bin/python3"),
+			const_cast<char*>(_scriptPath.c_str()),
+			NULL
+		};
+
+		// exec
+		execve(argv[0], argv, &_env[0]);
+		// what with this error
+		_exit(1);
 	}
 	else
 	{
+		std::stringstream log;
+		log << "Child created: " << this->_pid << " ";
+		writeLog(log.str(), SERVER_EVENTS);
 		close(this->_childFdIn);
 		close(this->_childFdOut);
 	}
-	// add to epoll the write fd and set to epoll out
-	//startWriting();                                                                                                  
+	updateCgiTime();
+	// Here we go back to HandleCompleteRequest
+	// we add to epoll and to the map<fd, cgiHandler>
+	this->setWriteBuffer("hello from parent\n");
 }
 
 // ---------- REQUEST/RESPONSE PROCESING ----------
@@ -221,42 +240,62 @@ _connection
 
 void	CgiHandler::continueReading()
 {
+	char buffer[4096];
+
+	//+ read (some) data from fd into handler's read buffer
+	ssize_t n = read(_parentFdIn, buffer, sizeof(buffer));
+	
+	if (n > 0)
+	{		
+		_readBuffer.append(buffer, n);
+	}
+	//+ if read returns 0 (EOF)
+	else if (n == 0)
+	{
+		this->_finished = true;
+	}
+	//+ Update Time
+	this->updateCgiTime();
+
 	// refresh client and cgi time
     //     read available data from fd into handler's read buffer
     //     if read returns 0 (EOF):
     //         mark cgi output finished
-    //         close stdout fd, remove from epoll
-    //         build HTTP response from read buffer
-    //         attach response to handler's _client
-    //         re-arm client fd for EPOLLOUT
-    //         cleanup: erase fd(s) from AServer's cgi map, delete handler
 
-}
 
-void	CgiHandler::switchToRead()
-{
-	// remove from multiplexer, change the int fd in the map of AServer, close both ends of that pipe 
-	// add to multiplexer the read end and set to epoll in
 }
 
 void	CgiHandler::continueWriting()
 {
-	// refresh client and cgi time
-	//     write next chunk of handler's write buffer to fd
-    //     if all body written:
-			// switchToRead();
+	//+ write next chunk of handler's write buffer to fd
+	ssize_t n = write(_parentFdOut, _writeBuffer.data() + _writeOffset, _writeBuffer.size() - _writeOffset);
+	if (n > 0)
+		_writeOffset += n;
+	//+ Update Time
+	this->updateCgiTime();
+
+	//+ If all body written
+	if (_writeOffset == _writeBuffer.size())
+	{
+		this->_finishedWritting = true;
+	}
 }
 
+void	CgiHandler::closeParentFdOut() { close(this->_parentFdOut); this->_parentFdOut = -1; }
+
+void	CgiHandler::setWriteBuffer(std::string str) { this->_writeBuffer = str; }
 
 // ---------- GETTERS ----------
 
 pid_t	CgiHandler::getPid() const { return this->_pid; }
 
-int	CgiHandler::getStdinFd() const { return this->_parentFdIn; }
+int	CgiHandler::getParentFdIn() const { return this->_parentFdIn; }
 
-int	CgiHandler::getStdoutFd() const { return this->_parentFdOut; }
+int	CgiHandler::getParentFdOut() const { return this->_parentFdOut; }
 
 bool	CgiHandler::isFinished() const { return this->_finished; }
+
+bool	CgiHandler::finishedWriting() const { return this->_finishedWritting; }
 
 const std::string&	CgiHandler::getWriteBuffer() const { return this->_writeBuffer; }
 
@@ -278,7 +317,7 @@ Client*	CgiHandler::getClient() const { return this->_client; }
 // ---------- MONITORING ----------
 
 
-void	CgiHandler::setStartTime() { time(&(this->_startTime)); }
+void	CgiHandler::updateCgiTime() { time(&(this->_startTime)); }
 
 bool	CgiHandler::cgiTimeout()
 {

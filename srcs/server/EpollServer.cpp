@@ -174,17 +174,56 @@ void	EpollServer::handleCgiEvent(int fd, uint32_t epoll_event)
 	{
 		return ; //*should not happen, safety check, log?
 	}
-    if (epoll_event & EPOLLOUT && fd == cgi->getStdinFd())
+    if (epoll_event & EPOLLOUT && fd == cgi->getParentFdOut())
 	{
-		cgi->continueWriting(); //* check?
+		cgi->continueWriting();
+		if (cgi->finishedWriting())
+		{
+			//+ Remove this fd from epoll
+			this->removeFdFromMultiplexer(fd);
+			//+ Remove from map<fd, cgiHandler>
+			this->removeCgiFromMap(fd);
+			//+ Close writting fd
+			cgi->closeParentFdOut();
+			//+ Add this handler back to the map with the readFd
+			this->addCgiToMap(cgi->getParentFdIn(), cgi);
+			//+ Add readFd to epoll
+			this->addFdToMultiplexer(cgi->getParentFdIn());
+			//+ Set EPOLLIN in the new Fd
+			this->watchForRead(cgi->getParentFdIn());
+			//+ Log
+			std::stringstream ss;
+			ss << "Cgi Handler [" << cgi->getPid() << "] finished writing, changing to read. ";
+			writeLog(ss.str(), SERVER_EVENTS);
+		}
 	}
-	else if (epoll_event & EPOLLIN && fd == cgi->getStdoutFd())
+	else if ((epoll_event & EPOLLIN || epoll_event & EPOLLHUP) && fd == cgi->getParentFdIn())
 	{
 		cgi->continueReading(); //* check?
 	}
 	if (cgi->isFinished())
 	{
-    	//cleanup: erase fd(s) from AServer's cgi map, delete handler
+		// + here it comes your function to create the Http response, now i just append the buffer
+		// + Attach response to handler's _client
+		std::string response = cgi->getReadBuffer(); //* this is what we change
+		this->prepareToSend(cgi->getClient()->getFd(), cgi->getClient(), response);
+
+    	//* cleanup:
+		//+ Remove this fd from epoll
+		this->removeFdFromMultiplexer(fd);
+
+		//+ Remove from map<fd, cgiHandler>
+		this->removeCgiFromMap(fd);
+
+		//+ Close all Fd
+		cgi->closeAllFd();
+
+		//+ Log
+		std::stringstream ss;
+		ss << "Cgi Handler [" << cgi->getPid() << "] finished reading, sending response. ";
+		writeLog(ss.str(), SERVER_EVENTS);
+
+		delete cgi;
 	}
 }
 

@@ -301,9 +301,9 @@ bool	AServer::handleCompleteRequest(int fd)
 		//+ On success, we create the handler, the child process and go back to the main loop to check for write to the cgi
 		else
 		{
-			cgi = new CgiHandler(handler);
 			try
 			{
+				cgi = new CgiHandler(handler);
 				cgi->openPipe();	//*this may throw
 			}
 			catch(const HttpException&)
@@ -311,9 +311,9 @@ bool	AServer::handleCompleteRequest(int fd)
 				delete cgi; //* Still need to check for a safe destructor por the kill(pid)
 				throw ;
 			}
-			this->addCgiToMap(cgi->getStdoutFd(), cgi);
-			this->addFdToMultiplexer(cgi->getStdoutFd());
-			cgi->setStartTime();
+			this->addCgiToMap(cgi->getParentFdOut(), cgi);
+			this->addFdToMultiplexer(cgi->getParentFdOut());
+			this->watchForWrite(cgi->getParentFdOut());
 			finishRequestCycle(c); //+ Cleanup request class, everything was read
 			return false;
 		}
