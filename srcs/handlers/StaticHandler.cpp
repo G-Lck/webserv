@@ -2,7 +2,7 @@
 
 StaticHandler::StaticHandler() {}
 
-StaticHandler::StaticHandler(const StaticHandler& other) { *this = other; }
+StaticHandler::StaticHandler(const Handler& other) : Handler(other) {}
 
 StaticHandler& StaticHandler::operator=(const StaticHandler& other) {
 	if (this != &other) {

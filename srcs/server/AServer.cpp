@@ -264,7 +264,6 @@ bool	AServer::handleCompleteRequest(int fd)
 		this->prepareToSend(fd, c, e.getResponseStr());
 		return true;
 	}
-
 	//+ Parse the request
 	Handler		handler(c);
 	try

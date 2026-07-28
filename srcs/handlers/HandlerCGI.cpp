@@ -68,8 +68,6 @@ void	CgiHandler::validateCgi()
 		throw HttpException(404, "Cgi - Not Found");
 	if (!validMethod())	//+ Check if allowed methods in location matches with request method
 		throw HttpException(405, "Method Not Allowed");
-	if (!validContentLength())
-		throw HttpException(400, "Bad Request (Content-Length)");
 }
 
 void	CgiHandler::setEnvVars()
@@ -139,7 +137,6 @@ void	CgiHandler::openPipe()
 		throw ;
 	}
 	setEnvVars();
-	
     int fd_res[2], fd_req[2];
 
     //+ error checking for pipe

@@ -6,23 +6,25 @@
 
 class StaticHandler: public Handler
 {
+	private:
+		StaticHandler(const StaticHandler& other);
 	public:
 		StaticHandler();
-		StaticHandler(const StaticHandler& other);
 		StaticHandler& operator=(const StaticHandler& other);
+		StaticHandler(const Handler& other);
 		~StaticHandler();
-	
+		
 		void	Get();
 		void	Post();
 		void	Delete();
-
+		
 		// Get //
 		void	GetDirectory();
 		void	GetFile();
 
 		// Post //
 		void	parseMultipartData();
-
+		
 		// Delete //
 		void	CanDelete();
 };
