@@ -37,6 +37,8 @@ class	AServer
 		bool	handleCompleteRequest(int fd);
 		void	finishRequestCycle(Client* c);
 		void	prepareToSend(int fd, Client * c, std::string single_response);
+		std::string	buildErrorResponse(int code) const;
+		std::string	buildErrorResponse(const Handler &handler, int code) const;
 		
 		//+ send
 		void	sendResponse(int fd);

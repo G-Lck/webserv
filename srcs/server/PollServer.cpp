@@ -1,5 +1,18 @@
 #include "../../includes/PollServer.hpp"
 
+static bool hasActiveCgiForClientFd(const std::map<int, CgiHandler*> &cgi_handlers, int client_fd)
+{
+	std::map<int, CgiHandler*>::const_iterator it = cgi_handlers.begin();
+	while (it != cgi_handlers.end())
+	{
+		CgiHandler *cgi = it->second;
+		if (cgi != NULL && cgi->getClient() != NULL && cgi->getClient()->getFd() == client_fd)
+			return true;
+		++it;
+	}
+	return false;
+}
+
 // --------------- Orthodoxy ---------------
 
 PollServer::PollServer() {}
@@ -42,8 +55,8 @@ void	PollServer::run(void)
 		throw runtimePollServerException("Error\nNo file descriptor to poll.");
 	while (1)
 	{
-		monitorClients();
-		int ready_count = poll(&this->_pollfds[0], this->_pollfds.size(), -1);
+		struct pollfd *pollfds = this->_pollfds.empty() ? NULL : &this->_pollfds[0];
+		int ready_count = poll(pollfds, this->_pollfds.size(), -1);
 		if (ready_count == -1)
 		{
 			if (errno == EINTR)
@@ -65,6 +78,12 @@ void	PollServer::run(void)
 			int current_fd = triggered[i].first;
 			short events = triggered[i].second;
 
+			if (this->fdIsCgi(current_fd))
+			{
+				this->handleCgiEvent(current_fd, events);
+				continue;
+			}
+
 			if (this->fdMatch(current_fd))
 			{
 				if (events & POLLIN)
@@ -73,6 +92,9 @@ void	PollServer::run(void)
 			}
 
 			if (this->_clients.find(current_fd) == this->_clients.end())
+				continue;
+
+			if (hasActiveCgiForClientFd(this->_cgi_handlers, current_fd))
 				continue;
 
 			if (events & (POLLERR | POLLNVAL))
@@ -92,10 +114,47 @@ void	PollServer::run(void)
 			if (events & POLLHUP)
 			{
 				Client *c = this->_clients[current_fd];
+				if (hasActiveCgiForClientFd(this->_cgi_handlers, current_fd))
+					continue;
 				if (c->isWriteBufferEmpty() && c->isResponseQueueEmpty())
 					this->clientDisconnect(current_fd);
 			}
 		}
+		std::map<int, CgiHandler*>::iterator cgi_it = this->_cgi_handlers.begin();
+		while (cgi_it != this->_cgi_handlers.end())
+		{
+			if (cgi_it->second != NULL && cgi_it->second->getClient() != NULL)
+				this->refreshClientTime(cgi_it->second->getClient()->getFd());
+			++cgi_it;
+		}
+		monitorClients();
+		monitorCGI();
+	}
+}
+
+void	PollServer::handleCgiEvent(int fd, short poll_events)
+{
+	CgiHandler* cgi = this->getCgiHandler(fd);
+
+	if (cgi == NULL)
+		return;
+	int stdin_fd = cgi->getStdinFd();
+	int stdout_fd = cgi->getStdoutFd();
+	if ((poll_events & POLLOUT) && fd == cgi->getStdinFd())
+	{
+		cgi->continueWriting();
+	}
+	else if ((poll_events & POLLIN) && fd == cgi->getStdoutFd())
+	{
+		cgi->continueReading();
+	}
+	if (cgi->isFinished())
+	{
+		if (stdin_fd != -1)
+			this->removeFdFromMultiplexer(stdin_fd);
+		if (stdout_fd != -1 && stdout_fd != stdin_fd)
+			this->removeFdFromMultiplexer(stdout_fd);
+		this->cgiDisconnect(stdout_fd);
 	}
 }
 

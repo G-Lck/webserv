@@ -23,6 +23,15 @@ class HttpResponse
 		const std::string&					getBody() const;
 		bool								getConnection() const;
 
+		void								setStatusCode(int code);
+		void								setStatusMessage(const std::string &message);
+		void								setHeaders(const std::map<std::string, std::string> &headers);
+		void								setHeader(const std::string &key, const std::string &value);
+		void								removeHeader(const std::string &key);
+		void								clearHeaders();
+		void								setBody(const std::string &body);
+		void								setConnection(bool keepAlive);
+
 		std::string							buildResponseStr() const;
 };
 
