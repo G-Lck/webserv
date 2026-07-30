@@ -19,6 +19,7 @@ class	PollServer: public AServer
 		void	removeFdFromMultiplexer( int fd );
 		void	watchForRead( int fd );
 		void	watchForWrite( int fd );
+		void	handleCgiEvent(int fd, short poll_events);
 	public:
 		PollServer();
 		~PollServer();

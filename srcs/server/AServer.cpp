@@ -14,6 +14,45 @@ AServer::~AServer()
 
 AServer::runtimeAServerException::runtimeAServerException(const char* message) : std::runtime_error(message) {} 
 
+static std::string getErrorStatusMessage(int code)
+{
+	switch (code)
+	{
+		case 400:
+			return "400 Bad Request";
+		case 403:
+			return "403 Forbidden";
+		case 404:
+			return "404 Not Found";
+		case 405:
+			return "405 Method Not Allowed";
+		case 411:
+			return "411 Length Required";
+		case 413:
+			return "413 Payload Too Large";
+		case 500:
+			return "500 Internal Server Error";
+		case 501:
+			return "501 Not Implemented";
+		case 504:
+			return "504 Gateway Timeout";
+		case 505:
+			return "505 HTTP Version Not Supported";
+		default:
+			return "500 Internal Server Error";
+	}
+}
+
+static std::string buildDefaultErrorBody(int code)
+{
+	return "<html><body><h1>" + getErrorStatusMessage(code) + "</h1></body></html>";
+}
+
+static bool shouldCloseErrorConnection(int code)
+{
+	return (code == 400 || code == 411 || code == 413 || code == 500 || code == 501 || code == 505);
+}
+
 // --------------- INITIALIZATION ---------------
 
 /// @brief Initializes physical sockets and sets up the virtual host routing maps.
@@ -153,6 +192,45 @@ static void logReadRequest(Client *c)
 	writeLog(sss.str(), ACCESS);
 }
 
+//mettre a jour le client connection header
+
+std::string	AServer::buildErrorResponse(int code) const
+{
+	HttpResponse response;
+
+	response.setStatusCode(code);
+	response.setStatusMessage(getErrorStatusMessage(code));
+	response.clearHeaders();
+	response.setHeader("Content-Type", "text/html");
+	response.setHeader("Server", "webserv/1.0");
+	response.setHeader("Connection", "close"); // change that
+	response.setBody(buildDefaultErrorBody(code));
+	response.setConnection(false);
+	return response.buildResponseStr();
+}
+
+std::string	AServer::buildErrorResponse(const Handler &handler, int code) const
+{
+	HttpResponse response;
+	std::map<std::string, std::string> req_headers = handler.getRequestHandler().getHeaders();
+	std::map<std::string, std::string>::const_iterator it_conn = req_headers.find("Connection");
+	bool keep_alive = !shouldCloseErrorConnection(code);
+
+	if (it_conn != req_headers.end() && it_conn->second == "close")
+		keep_alive = false;
+
+	response.setStatusCode(code);
+	response.setStatusMessage(getErrorStatusMessage(code));
+	response.clearHeaders();
+	response.setHeader("Content-Type", "text/html");
+	response.setHeader("Server", "webserv/1.0");
+	response.setHeader("Connection", keep_alive ? "keep-alive" : "close");
+	if (keep_alive)
+		response.setHeader("Keep-Alive", "timeout=60");
+	response.setBody(handler.CreateErrorPageContent(code));
+	response.setConnection(keep_alive);
+	return response.buildResponseStr();
+}
 /// @brief	This function will call recv, and either handle the errors
 ///			or on success:
 ///			Case 1: The request is not yet complete:
@@ -223,10 +301,8 @@ void    AServer::readRequest(int fd)
 				std::stringstream ss;
 				ss << e.getCode() << ": " << e.what();
 				writeLog(ss.str(), STATUS_CODE);
-				//~ HERE WE MISS A FUNCTION TO EIRTHER GET THE PAGE FROM LOCATION
-				//~ OR CALL:
 				finishRequestCycle(c); //+ Cleanup http request
-				this->prepareToSend(fd, c, e.getResponseStr());
+				this->prepareToSend(fd, c, this->buildErrorResponse(e.getCode()));
 			}
 		}
 	}
@@ -262,7 +338,7 @@ bool	AServer::handleCompleteRequest(int fd)
 		HttpException e(500, "500: Internal Server Error: handleCompleRequest()");
 		writeLog("500: Internal Server Error: handleCompleRequest()", STATUS_CODE);
 		finishRequestCycle(c); //+ Cleanup http request
-		this->prepareToSend(fd, c, e.getResponseStr());
+		this->prepareToSend(fd, c, this->buildErrorResponse(e.getCode()));
 		return true;
 	}
 	//+ Parse the request
@@ -276,9 +352,7 @@ bool	AServer::handleCompleteRequest(int fd)
 		std::stringstream ss;
 		ss << e.getCode() << ": " << e.what();
 		writeLog(ss.str(), STATUS_CODE);
-		//~ HERE WE MISS A FUNCTION TO EIRTHER GET THE PAGE FROM LOCATION
-		//~ OR CALL:
-		single_response = e.getResponseStr();
+		single_response = this->buildErrorResponse(handler, e.getCode());
 		finishRequestCycle(c); //+ Cleanup http request
 		this->prepareToSend(fd, c, single_response);
 		return true;
@@ -324,9 +398,7 @@ bool	AServer::handleCompleteRequest(int fd)
 		std::stringstream ss;
 		ss << e.getCode() << ": " << e.what();
 		writeLog(ss.str(), STATUS_CODE);
-		//~ HERE WE MISS A FUNCTION TO EIRTHER GET THE PAGE FROM LOCATION
-		//~ OR CALL:
-		single_response = e.getResponseStr();
+		single_response = this->buildErrorResponse(handler, e.getCode());
 		finishRequestCycle(c); //+ Cleanup http request
 		this->prepareToSend(fd, c, single_response);
 		return true;
@@ -583,16 +655,9 @@ void	AServer::monitorCGI()
 			//+ Log
 			std::ostringstream oss;
 			oss << *(it->second) << " --> CGI Timeout";
-			writeLog(oss.str(), SERVER_EVENTS);
+			writeLog(oss.str(), SERVER_EVENTS); 
 
-			//+ Send response timeout
-			// if (i have error page)
-			// {
-			//~ HERE WE MISS A FUNCTION TO EIRTHER GET THE PAGE FROM LOCATION
-			//~ OR CALL:
-			// }
-			// else
-			std::string single_response = HttpException(504, " Cgi Timeout").getResponseStr();
+			std::string single_response = this->buildErrorResponse(*(it->second), 504);
 			this->prepareToSend(it->second->getClient()->getFd(), it->second->getClient(), single_response);
 
 			//+ Kill Cgi

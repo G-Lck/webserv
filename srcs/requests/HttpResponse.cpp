@@ -42,6 +42,47 @@ bool	HttpResponse::getConnection() const
 	return this->_connection;
 }
 
+
+void HttpResponse::setStatusCode(int code)
+{
+    this->_status_code = code;
+}
+
+void HttpResponse::setStatusMessage(const std::string &message)
+{
+    this->_status_message = message;
+}
+
+void HttpResponse::setHeaders(const std::map<std::string, std::string> &headers)
+{
+    this->_headers = headers;
+}
+
+void HttpResponse::setHeader(const std::string &key, const std::string &value)
+{
+    this->_headers[key] = value;
+}
+
+void HttpResponse::removeHeader(const std::string &key)
+{
+    this->_headers.erase(key);
+}
+
+void HttpResponse::clearHeaders()
+{
+    this->_headers.clear();
+}
+
+void HttpResponse::setBody(const std::string &body)
+{
+    this->_body = body;
+}
+
+void HttpResponse::setConnection(bool keepAlive)
+{
+    this->_connection = keepAlive;
+}
+
 std::string	HttpResponse::buildResponseStr() const
 {
 	std::ostringstream oss;

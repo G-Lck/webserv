@@ -54,9 +54,9 @@ class Handler
 		const std::string&		getMethod() const;
 		const std::string&		getPath() const;
 		const std::string&		getServerName() const;
-		bool					hasErrorPage(int code) const;
 
-		std::string				getErrorPageContent(int code) const;
+		bool					hasErrorPage(int code) const;
+		std::string				CreateErrorPageContent(int code) const;
 };
 
 #endif
