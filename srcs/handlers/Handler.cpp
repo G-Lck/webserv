@@ -237,26 +237,25 @@ const std::string& Handler::getMethod() const { return this->_method; }
 
 const std::string& Handler::getPath() const { return this->_path; }
 
-bool Handler::hasErrorPage(int code) const { return this->_location.getErrorPages().find(code) != this->_location.getErrorPages().end(); }
-
 const std::string&	Handler::getServerName() const { return (this->_server_name); }
 
 
 // ---------- ERROR PAGES ----------
 
+bool Handler::hasErrorPage(int code) const { return this->_location.getErrorPages().find(code) != this->_location.getErrorPages().end(); }
 
-std::string	Handler::getErrorPageContent(int code) const
+std::string	Handler::CreateErrorPageContent(int code) const
 {
-	// look up code in this->_location's error pages map
-	// if not found:
-	//     return empty string   // caller falls back to default
-
-	// open the file at that path
-	// if open fails (missing/unreadable):
-	//     return empty string   // caller falls back to default
-
-	// read entire file into a string
-	// return that string
-	(void)code;
-	return "";
+    if (this->hasErrorPage(code))
+    {
+        std::map<int, std::string>::const_iterator it = this->_location.getErrorPages().find(code);
+		std::ifstream file(it->second.c_str());
+		if (file.is_open() && file.good())
+		{
+			std::ostringstream content;
+			content << file.rdbuf();
+			return content.str();
+		}
+    }
+	return ""; // should return the default one
 }
