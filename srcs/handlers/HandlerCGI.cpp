@@ -6,6 +6,9 @@ CgiHandler::CgiHandler() : _pid(-1), _parentFdIn(-1), _parentFdOut(-1), _childFd
 
 CgiHandler::~CgiHandler()
 {
+	std::stringstream ss;
+	ss << *this << "Terminating child process";
+	writeLog(ss.str(), SERVER_EVENTS);
 	this->closeAllFd();
 	this->killCgi();
 }
@@ -70,10 +73,26 @@ void	CgiHandler::validateCgi()
 		throw HttpException(405, "Method Not Allowed");
 }
 
+static std::string	headerToCgiFormat(const std::string &header_name, const std::string &header_value)
+{
+	std::string	ret = "HTTP_";
+
+	for (size_t i = 0; i < header_name.size(); ++i)
+	{
+        char c = header_name[i];
+		if (c == '-')
+			ret += '_';
+		else
+			ret += std::toupper(static_cast<unsigned char>(c));
+	}
+	return (ret.append("=").append(header_value));
+}
+
 void	CgiHandler::setEnvVars()
 {
 	std::vector<std::string>							env;
 	HttpRequest 										req = this->getRequestHandler();
+	std::map<std::string, std::string>					headers = req.getHeaders();
 	std::map<std::string, std::string>::const_iterator	h_it;	
 
 	//+ Hard-coded ones
@@ -85,11 +104,11 @@ void	CgiHandler::setEnvVars()
 	env.push_back("REQUEST_METHOD=" + req.getMethod());
 	env.push_back("QUERY_STRING=" + req.getQueryString());
 
-	h_it = req.getHeaders().find("Content-Type");
-	if (h_it != req.getHeaders().end())
+	h_it = headers.find("Content-Type");
+	if (h_it != headers.end())
 		env.push_back("CONTENT_TYPE=" + h_it->second);
-	h_it = req.getHeaders().find("Content-Length");
-	if (h_it != req.getHeaders().end())
+	h_it = headers.find("Content-Length");
+	if (h_it != headers.end())
 		env.push_back("CONTENT_LENGTH=" + h_it->second);
 	env.push_back("SCRIPT_NAME=" + splitPath(0));
 	env.push_back("PATH_INFO=" + splitPath(1));
@@ -104,11 +123,20 @@ void	CgiHandler::setEnvVars()
 	// REMOTE_HOST — skip, not doing reverse DNS
 	// AUTH_TYPE, REMOTE_USER, REMOTE_IDENT — skip, no auth implemented
 
+	//+ Headers
+	for (h_it = headers.begin(); h_it != headers.end(); h_it++)
+	{
+		if (h_it->first == "Content-Type" || h_it->first == "Content-Length" || h_it->first == "Connection")
+			continue ;
+		env.push_back(headerToCgiFormat(h_it->first, h_it->second));
+	}
+
 	//+ Populate
 	std::vector<char*> envp;
 	for (size_t i = 0; i < env.size(); i++)
 		envp.push_back(const_cast<char*>(env[i].c_str()));
 	envp.push_back(NULL);
+	this->_env = envp;
 }
 
 std::string	CgiHandler::splitPath(int flag)

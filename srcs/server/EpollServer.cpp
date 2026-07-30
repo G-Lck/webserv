@@ -193,7 +193,7 @@ void	EpollServer::handleCgiEvent(int fd, uint32_t epoll_event)
 			this->watchForRead(cgi->getParentFdIn());
 			//+ Log
 			std::stringstream ss;
-			ss << "Cgi Handler [" << cgi->getPid() << "] finished writing, changing to read. ";
+			ss << "Cgi Handler [" << cgi->getPid() << "] finished writing to cgi: HttpRequest:" << cgi->getRequestHandler() <<", changing to read. ";
 			writeLog(ss.str(), SERVER_EVENTS);
 		}
 	}

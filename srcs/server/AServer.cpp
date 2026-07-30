@@ -152,6 +152,7 @@ static void logReadRequest(Client *c)
 	sss << c->getRequest();
 	writeLog(sss.str(), ACCESS);
 }
+
 /// @brief	This function will call recv, and either handle the errors
 ///			or on success:
 ///			Case 1: The request is not yet complete:
@@ -351,6 +352,9 @@ void AServer::finishRequestCycle(Client* c)
 void AServer::prepareToSend(int fd, Client* c, std::string single_response)
 {
     c->addResponseQueue(single_response);
+	std::stringstream ss;
+	ss << "Adding response " << single_response << "to queue of " << *c;
+	writeLog(ss.str(), SERVER_EVENTS);
 
 	//+ Check if needs to be queued before sending
 	//+ leaves the new response queued. sendResponse will pick it up later when the current one finishes.
