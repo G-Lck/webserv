@@ -176,6 +176,7 @@ void	EpollServer::handleCgiEvent(int fd, uint32_t epoll_event)
 	}
     if (epoll_event & EPOLLOUT && fd == cgi->getParentFdOut())
 	{
+		//~ IF EPOLLHUP CHECK FOR ERRORS, RETURN CODE (CHECK EPOLLHUP AS WELL TO CHECK FOR CRASH DURING WRITING)
 		cgi->continueWriting();
 		if (cgi->finishedWriting())
 		{

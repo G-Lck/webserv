@@ -91,7 +91,7 @@ def show_environment():
 
 # Change this to test different cases
 
-test = "env"
+test = "slow"
 
 
 if test == "normal":
