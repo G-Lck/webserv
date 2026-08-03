@@ -14,6 +14,7 @@ class Handler
 	protected:
 		Client*						_client;
 		HttpRequest					_http_request;
+		HttpResponse				_http_response;
 		ServerConfig				_my_virtual_server;
 		LocationConfig				_location;
 		std::string					_method;
@@ -44,11 +45,11 @@ class Handler
 		//+ ------ MAIN FUNCTIONALLITY ------
 		void	initAndParseHandler(const std::vector<ServerConfig> &virtual_servers);
 		bool	isCGI() const;
-		void	executeStatic();
 
 		//+ ------ GETTERS ------
 		Client*					getClient() const;
 		const HttpRequest&		getRequestHandler() const;
+		const HttpResponse&		getResponseHandler() const;
 		const ServerConfig&		getVirtualServer() const;
 		const LocationConfig&	getLocation() const;
 		const std::string&		getMethod() const;

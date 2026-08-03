@@ -90,36 +90,40 @@ static std::string	headerToCgiFormat(const std::string &header_name, const std::
 
 void	CgiHandler::setEnvVars()
 {
-	std::vector<std::string>							env;
 	HttpRequest 										req = this->getRequestHandler();
 	std::map<std::string, std::string>					headers = req.getHeaders();
 	std::map<std::string, std::string>::const_iterator	h_it;	
 
 	//+ Hard-coded ones
-	env.push_back("SERVER_PROTOCOL=HTTP/1.1");
-	env.push_back("SERVER_SOFTWARE=webserv/1.0");
-	env.push_back("GATEWAY_INTERFACE=CGI/1.1");
+	this->_envStrings.push_back("SERVER_PROTOCOL=HTTP/1.1");
+	this->_envStrings.push_back("SERVER_SOFTWARE=webserv/1.0");
+	this->_envStrings.push_back("GATEWAY_INTERFACE=CGI/1.1");
 
 	//+ From HttpRequest
-	env.push_back("REQUEST_METHOD=" + req.getMethod());
-	env.push_back("QUERY_STRING=" + req.getQueryString());
+	this->_envStrings.push_back("REQUEST_METHOD=" + req.getMethod());
+	this->_envStrings.push_back("QUERY_STRING=" + req.getQueryString());
 
 	h_it = headers.find("Content-Type");
 	if (h_it != headers.end())
-		env.push_back("CONTENT_TYPE=" + h_it->second);
-	h_it = headers.find("Content-Length");
-	if (h_it != headers.end())
-		env.push_back("CONTENT_LENGTH=" + h_it->second);
-	env.push_back("SCRIPT_NAME=" + splitPath(0));
-	env.push_back("PATH_INFO=" + splitPath(1));
+		this->_envStrings.push_back("CONTENT_TYPE=" + h_it->second);
+	if (req.getMethod() == "POST")
+	{
+		std::ostringstream oss;
+		oss << req.getBody().size();
+		this->_envStrings.push_back("CONTENT_LENGTH=" + oss.str());
+	}
+	this->_envStrings.push_back("SCRIPT_NAME=" + splitPath(0));
+	this->_envStrings.push_back("PATH_INFO=" + splitPath(1));
+	if (!splitPath(1).empty())
+    	this->_envStrings.push_back("PATH_TRANSLATED=." + this->getVirtualServer().getRoot() + splitPath(1));
 	
 	//+ ServerConfig matches
-	env.push_back("SERVER_NAME=" + this->getServerName());
-	env.push_back("SERVER_PORT=" + this->getClient()->getHostPort().second);
+	this->_envStrings.push_back("SERVER_NAME=" + this->getServerName());
+	this->_envStrings.push_back("SERVER_PORT=" + this->getClient()->getHostPort().second);
 
 	//+ From socket/connection
 	// REMOTE_ADDR ← client's sockaddr (from your Socket/connection object)
-	env.push_back("REMOTE_ADDR=" + this->getClient()->getRemoteAddress());
+	this->_envStrings.push_back("REMOTE_ADDR=" + this->getClient()->getRemoteAddress());
 	// REMOTE_HOST — skip, not doing reverse DNS
 	// AUTH_TYPE, REMOTE_USER, REMOTE_IDENT — skip, no auth implemented
 
@@ -128,15 +132,14 @@ void	CgiHandler::setEnvVars()
 	{
 		if (h_it->first == "Content-Type" || h_it->first == "Content-Length" || h_it->first == "Connection")
 			continue ;
-		env.push_back(headerToCgiFormat(h_it->first, h_it->second));
+		this->_envStrings.push_back(headerToCgiFormat(h_it->first, h_it->second));
 	}
 
 	//+ Populate
-	std::vector<char*> envp;
-	for (size_t i = 0; i < env.size(); i++)
-		envp.push_back(const_cast<char*>(env[i].c_str()));
-	envp.push_back(NULL);
-	this->_env = envp;
+	_env.clear();
+	for (size_t i = 0; i < _envStrings.size(); ++i)
+		_env.push_back(const_cast<char*>(_envStrings[i].c_str()));
+	_env.push_back(NULL);
 }
 
 std::string	CgiHandler::splitPath(int flag)
@@ -236,7 +239,7 @@ void	CgiHandler::openPipe()
 		};
 
 		// exec
-		execve(argv[0], argv, &_env[0]);
+		execve(argv[0], argv, &this->_env[0]);
 		// what with this error
 		_exit(1);
 	}
@@ -251,20 +254,11 @@ void	CgiHandler::openPipe()
 	updateCgiTime();
 	// Here we go back to HandleCompleteRequest
 	// we add to epoll and to the map<fd, cgiHandler>
-	this->setWriteBuffer("hello from parent\n");
+	setWriteBuffer(this->getRequestHandler().getBody());
 }
 
 // ---------- REQUEST/RESPONSE PROCESING ----------
 
-
-/*
-* What the response needs
-_status_code
-_status_message
-_headers
-_body
-_connection
-*/
 
 void	CgiHandler::continueReading()
 {
@@ -309,6 +303,124 @@ void	CgiHandler::continueWriting()
 	}
 }
 
+// ---------- CGI RESPONSE PARSING ----------
+
+void CgiHandler::parseCgiResponse()
+{
+	this->_http_response.clearHeaders();
+
+	//+ Check if valid format of end of response
+	//+ Parse Headers
+	if (!splitHeadersAndBody() || !parseResponseHeaders())
+	{
+		this->_http_response.setStatusCode(502);
+		this->_http_response.setStatusMessage("Bad Gateway");
+		return ;
+	}
+
+	//+ Body is copied exactly
+	this->_http_response.setBody(this->_response_body);
+}
+
+bool CgiHandler::splitHeadersAndBody()
+{
+	//+ Empty CGI output
+	if (this->_readBuffer.empty())
+		return false;
+
+	//+ Find header/body separator
+	size_t sep = this->_readBuffer.find("\r\n\r\n");
+	size_t sep_len = 4;
+
+	if (sep == std::string::npos)
+	{
+		sep = this->_readBuffer.find("\n\n");
+		sep_len = 2;
+	}
+
+	//+ CGI did not send complete headers
+	if (sep == std::string::npos)
+		return false;
+
+	//+ Make the split
+	this->_response_headers = this->_readBuffer.substr(0, sep);
+	this->_response_body = this->_readBuffer.substr(sep + sep_len);
+
+	return true;
+}
+
+bool CgiHandler::parseResponseHeaders()
+{
+	//+ Default CGI response
+	int status_code = 200;
+	std::string status_message = "OK";
+
+	bool has_content_type = false;
+
+	//+ Parse headers
+	std::istringstream header_stream(this->_response_headers);
+	std::string line;
+
+	while (std::getline(header_stream, line))
+	{
+		//+ Remove CR from CRLF lines
+		if (!line.empty() && line[line.size() - 1] == '\r')
+			line.erase(line.size() - 1);
+
+		//+ Ignore empty lines
+		if (line.empty())
+			continue;
+
+		size_t colon = line.find(':');
+
+		//+ Invalid header
+		if (colon == std::string::npos)
+			return false;
+
+		std::string key = line.substr(0, colon);
+		std::string value = line.substr(colon + 1);
+
+		//+ Trim spaces after ':'
+		while (!value.empty() && value[0] == ' ')
+			value.erase(0, 1);
+
+		//+ Trim trailing spaces
+		while (!value.empty() && value[value.size() - 1] == ' ')
+			value.erase(value.size() - 1);
+
+		//+ Status header
+		if (key == "Status")
+		{
+			std::istringstream status(value);
+
+			if (!(status >> status_code))
+				return false;
+
+			std::getline(status, status_message);
+
+			if (!status_message.empty() && status_message[0] == ' ')
+				status_message.erase(0, 1);
+		}
+		else
+		{
+			this->_http_response.setHeader(key, value);
+
+			if (key == "Content-Type")
+				has_content_type = true;
+		}
+	}
+
+	//+ Normal CGI responses need Content-Type
+	if (!has_content_type && status_code < 300)
+		return false;
+
+	//+ Populate HttpResponse
+	this->_http_response.setStatusCode(status_code);
+	this->_http_response.setStatusMessage(status_message);
+
+	return true;
+}
+
 void	CgiHandler::closeParentFdOut() { close(this->_parentFdOut); this->_parentFdOut = -1; }
 
 void	CgiHandler::setWriteBuffer(std::string str) { this->_writeBuffer = str; }
@@ -340,6 +452,10 @@ int	CgiHandler::getExitStatus() const { return this->_exitStatus; }
 const std::string&	CgiHandler::getScriptPath() const { return this->_scriptPath; }
 
 Client*	CgiHandler::getClient() const { return this->_client; }
+
+int CgiHandler::getStdinFd() const { return this->_parentFdOut; }
+
+int CgiHandler::getStdoutFd() const { return this->_parentFdIn; }
 
 
 // ---------- MONITORING ----------

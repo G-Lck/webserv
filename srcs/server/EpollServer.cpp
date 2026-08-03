@@ -204,10 +204,9 @@ void	EpollServer::handleCgiEvent(int fd, uint32_t epoll_event)
 	}
 	if (cgi->isFinished())
 	{
-		// + here it comes your function to create the Http response, now i just append the buffer
-		// + Attach response to handler's _client
-		std::string response = cgi->getReadBuffer(); //* this is what we change
-		this->prepareToSend(cgi->getClient()->getFd(), cgi->getClient(), response);
+		cgi->parseCgiResponse();
+		HttpResponse response = cgi->getResponseHandler();
+		this->prepareToSend(cgi->getClient()->getFd(), cgi->getClient(), response.buildResponseStr());
 
     	//* cleanup:
 		//+ Remove this fd from epoll

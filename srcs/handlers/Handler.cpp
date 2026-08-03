@@ -229,6 +229,8 @@ Client* Handler::getClient() const { return this->_client; }
 
 const HttpRequest& Handler::getRequestHandler() const { return this->_http_request; }
 
+const HttpResponse& Handler::getResponseHandler() const { return this->_http_response; }
+
 const ServerConfig& Handler::getVirtualServer() const { return this->_my_virtual_server; }
 
 const LocationConfig& Handler::getLocation() const { return this->_location; }
