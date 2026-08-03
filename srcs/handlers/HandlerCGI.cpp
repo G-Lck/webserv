@@ -78,17 +78,17 @@ void	CgiHandler::setEnvVars()
 
 	//+ Hard-coded ones
 	env.push_back("SERVER_PROTOCOL=HTTP/1.1");
-	env.push_back("SERVER_SOFTWARE=webserv/1.0");
+	env.push_back("SERVER_SOFTWARE=webserv2000");
 	env.push_back("GATEWAY_INTERFACE=CGI/1.1");
 
 	//+ From HttpRequest
 	env.push_back("REQUEST_METHOD=" + req.getMethod());
 	env.push_back("QUERY_STRING=" + req.getQueryString());
 
-	h_it = req.getHeaders().find("Content-Type");
+	h_it = req.getHeaders().find("content-type");
 	if (h_it != req.getHeaders().end())
 		env.push_back("CONTENT_TYPE=" + h_it->second);
-	h_it = req.getHeaders().find("Content-Length");
+	h_it = req.getHeaders().find("content-length");
 	if (h_it != req.getHeaders().end())
 		env.push_back("CONTENT_LENGTH=" + h_it->second);
 	env.push_back("SCRIPT_NAME=" + splitPath(0));

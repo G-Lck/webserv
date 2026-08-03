@@ -20,6 +20,7 @@ class Handler
 		std::string					_path;
 		std::string					_server_name;
 		std::string					_port;
+		std::map<std::string, std::string> _response_headers;
 
 		//+ ------ FIRST PARSING ------
 		void	checkDotsPath();
@@ -54,6 +55,8 @@ class Handler
 		const std::string&		getMethod() const;
 		const std::string&		getPath() const;
 		const std::string&		getServerName() const;
+		const std::map<std::string, std::string>&	getResponseHeaders() const;
+		void	setResponseHeader(const std::string &key, const std::string &value);
 
 		bool					hasErrorPage(int code) const;
 		std::string				CreateErrorPageContent(int code) const;

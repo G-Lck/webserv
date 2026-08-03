@@ -1,4 +1,13 @@
 #include "../../includes/HttpRequest.hpp"
+#include <cctype>
+
+static std::string toLowerAscii(const std::string &s)
+{
+	std::string out = s;
+	for (size_t i = 0; i < out.size(); ++i)
+		out[i] = static_cast<char>(std::tolower(static_cast<unsigned char>(out[i])));
+	return out;
+}
 
 HttpRequest::HttpRequest(): _consumed_bytes(0) {}
 
@@ -86,11 +95,13 @@ void	HttpRequest::parseHeaders(const std::string& raw)
 		if (sep == std::string::npos)
 			throw HttpException(400, "Bad Request");
 
-		std::string	key   = line.substr(0, sep);
+		std::string	key   = toLowerAscii(line.substr(0, sep));
 		std::string	value = line.substr(sep + 2);
+		if (key == "connection" || key == "transfer-encoding")
+			value = toLowerAscii(value);
 		this->_headers[key] = value;
 	}
-	if (this->_version == "HTTP/1.1" && !this->_headers.count("Host"))
+	if (this->_version == "HTTP/1.1" && !this->_headers.count("host"))
 		throw HttpException(400, "Bad Request");
 }
 
@@ -100,7 +111,7 @@ void	HttpRequest::parseHeaders(const std::string& raw)
 /// @return true when body_raw is bigger than content_length and false otherwise
 bool HttpRequest::parseBody(const std::string& body_raw)
 {
-	std::map<std::string, std::string>::const_iterator it = this->_headers.find("Content-Length");
+	std::map<std::string, std::string>::const_iterator it = this->_headers.find("content-length");
 	if (it == this->_headers.end())
 		throw HttpException(411, "The request did not specify the length of its content");
 
@@ -170,9 +181,9 @@ bool HttpRequest::parse(const std::string& raw)
 	parseRequestLine(raw.substr(0, first_line_end));
 	parseHeaders(raw.substr(first_line_end + 2, header_end - first_line_end - 2));
 
-	if (_headers.count("Transfer-Encoding") && _headers["Transfer-Encoding"] == "chunked")
+	if (_headers.count("transfer-encoding") && _headers["transfer-encoding"] == "chunked")
 		return parseChunkedBody(raw.substr(header_end + 4));
-	else if (_headers.count("Content-Length"))
+	else if (_headers.count("content-length"))
 		return parseBody(raw.substr(header_end + 4));
 
 	return true;
@@ -183,7 +194,7 @@ size_t	HttpRequest::getConsumedBytes() const
 	return this->_consumed_bytes;
 }
 
-std::map<std::string, std::string>	HttpRequest::getHeaders() const
+const std::map<std::string, std::string>&	HttpRequest::getHeaders() const
 {
 	return this->_headers;
 }

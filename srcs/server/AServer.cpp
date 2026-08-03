@@ -1,4 +1,5 @@
 #include "../../includes/AServer.hpp"
+#include "../../includes/StaticHandler.hpp"
 
 // --------------- Orthodoxy ---------------
 
@@ -16,31 +17,47 @@ AServer::runtimeAServerException::runtimeAServerException(const char* message) :
 
 static std::string getErrorStatusMessage(int code)
 {
-	switch (code)
-	{
-		case 400:
-			return "400 Bad Request";
-		case 403:
-			return "403 Forbidden";
-		case 404:
-			return "404 Not Found";
-		case 405:
-			return "405 Method Not Allowed";
-		case 411:
-			return "411 Length Required";
-		case 413:
-			return "413 Payload Too Large";
-		case 500:
-			return "500 Internal Server Error";
-		case 501:
-			return "501 Not Implemented";
-		case 504:
-			return "504 Gateway Timeout";
-		case 505:
-			return "505 HTTP Version Not Supported";
-		default:
-			return "500 Internal Server Error";
-	}
+    switch (code)
+    {
+		case 200:
+			return "OK";
+		case 201:
+			return "Created";
+		case 204:
+			return "No Content";
+        case 301:
+            return "Moved Permanently";
+        case 302:
+            return "Found";
+        case 307:
+            return "Temporary Redirect";
+        case 308:
+            return "Permanent Redirect";
+        case 400:
+            return "Bad Request";
+        case 403:
+            return "Forbidden";
+        case 404:
+            return "Not Found";
+        case 405:
+            return "Method Not Allowed";
+        case 411:
+            return "Length Required";
+        case 413:
+            return "Payload Too Large";
+        case 418:
+            return "I'm a teapot";
+        case 500:
+            return "Internal Server Error";
+        case 501:
+            return "Not Implemented";
+        case 504:
+            return "Gateway Timeout";
+        case 505:
+            return "HTTP Version Not Supported";
+        default:
+            return "Unknown Error";
+    }
 }
 
 static std::string buildDefaultErrorBody(int code)
@@ -51,6 +68,40 @@ static std::string buildDefaultErrorBody(int code)
 static bool shouldCloseErrorConnection(int code)
 {
 	return (code == 400 || code == 411 || code == 413 || code == 500 || code == 501 || code == 505);
+}
+
+static bool requestAskedClose(const Handler &handler)
+{
+	const std::map<std::string, std::string> &req_headers = handler.getRequestHandler().getHeaders();
+	std::map<std::string, std::string>::const_iterator it_conn = req_headers.find("connection");
+
+	return (it_conn != req_headers.end() && it_conn->second == "close");
+}
+
+static bool shouldKeepAliveForError(const Handler &handler, int code)
+{
+	return !(requestAskedClose(handler) || shouldCloseErrorConnection(code));
+}
+
+static std::string buildStaticSuccessResponse(const StaticHandler &handler, bool keep_alive)
+{
+	HttpResponse response;
+	int status = handler.getStatusCode();
+
+	response.setStatusCode(status);
+	response.setStatusMessage(getErrorStatusMessage(status));
+	response.clearHeaders();
+	response.setHeader("Server", "webserv2000");
+	if (status != 204)
+		response.setHeader("Content-Type", handler.getContentType());
+	response.setHeader("Connection", keep_alive ? "keep-alive" : "close");
+	if (keep_alive)
+		response.setHeader("Keep-Alive", "timeout=60");
+	else
+		response.removeHeader("Keep-Alive");
+	response.setBody(status == 204 ? "" : handler.getResponseBody());
+	response.setConnection(keep_alive);
+	return response.buildResponseStr();
 }
 
 // --------------- INITIALIZATION ---------------
@@ -202,7 +253,7 @@ std::string	AServer::buildErrorResponse(int code) const
 	response.setStatusMessage(getErrorStatusMessage(code));
 	response.clearHeaders();
 	response.setHeader("Content-Type", "text/html");
-	response.setHeader("Server", "webserv/1.0");
+	response.setHeader("Server", "webserv2000");
 	response.setHeader("Connection", "close"); // change that
 	response.setBody(buildDefaultErrorBody(code));
 	response.setConnection(false);
@@ -212,25 +263,32 @@ std::string	AServer::buildErrorResponse(int code) const
 std::string	AServer::buildErrorResponse(const Handler &handler, int code) const
 {
 	HttpResponse response;
-	std::map<std::string, std::string> req_headers = handler.getRequestHandler().getHeaders();
-	std::map<std::string, std::string>::const_iterator it_conn = req_headers.find("Connection");
-	bool keep_alive = !shouldCloseErrorConnection(code);
-
-	if (it_conn != req_headers.end() && it_conn->second == "close")
-		keep_alive = false;
+	bool keep_alive = shouldKeepAliveForError(handler, code);
+	std::string body = handler.CreateErrorPageContent(code);
+	if (body.empty())
+		body = buildDefaultErrorBody(code);
 
 	response.setStatusCode(code);
 	response.setStatusMessage(getErrorStatusMessage(code));
 	response.clearHeaders();
 	response.setHeader("Content-Type", "text/html");
-	response.setHeader("Server", "webserv/1.0");
+	response.setHeader("Server", "webserv2000");
+	const std::map<std::string, std::string> &handler_headers = handler.getResponseHeaders();
+    for (std::map<std::string, std::string>::const_iterator it = handler_headers.begin(); it != handler_headers.end(); ++it)
+	{
+		response.setHeader(it->first, it->second);
+	}
 	response.setHeader("Connection", keep_alive ? "keep-alive" : "close");
 	if (keep_alive)
 		response.setHeader("Keep-Alive", "timeout=60");
-	response.setBody(handler.CreateErrorPageContent(code));
+	else
+		response.removeHeader("Keep-Alive");
+	
+	response.setBody(body);
 	response.setConnection(keep_alive);
 	return response.buildResponseStr();
 }
+
 /// @brief	This function will call recv, and either handle the errors
 ///			or on success:
 ///			Case 1: The request is not yet complete:
@@ -302,6 +360,7 @@ void    AServer::readRequest(int fd)
 				ss << e.getCode() << ": " << e.what();
 				writeLog(ss.str(), STATUS_CODE);
 				finishRequestCycle(c); //+ Cleanup http request
+				c->setKeepAlive(false);
 				this->prepareToSend(fd, c, this->buildErrorResponse(e.getCode()));
 			}
 		}
@@ -332,12 +391,14 @@ bool	AServer::handleCompleteRequest(int fd)
 	Client* c = it->second;
 	
 	//+ Build the HTTP response for this request.
+	// look again why we do that like that
 	t_virtualServer::iterator route_it = this->_virtualServers.find(c->getHostPort());
 	if (route_it == this->_virtualServers.end())
 	{
 		HttpException e(500, "500: Internal Server Error: handleCompleRequest()");
 		writeLog("500: Internal Server Error: handleCompleRequest()", STATUS_CODE);
 		finishRequestCycle(c); //+ Cleanup http request
+		c->setKeepAlive(false);
 		this->prepareToSend(fd, c, this->buildErrorResponse(e.getCode()));
 		return true;
 	}
@@ -354,6 +415,7 @@ bool	AServer::handleCompleteRequest(int fd)
 		writeLog(ss.str(), STATUS_CODE);
 		single_response = this->buildErrorResponse(handler, e.getCode());
 		finishRequestCycle(c); //+ Cleanup http request
+		c->setKeepAlive(shouldKeepAliveForError(handler, e.getCode()));
 		this->prepareToSend(fd, c, single_response);
 		return true;
 	}
@@ -365,10 +427,18 @@ bool	AServer::handleCompleteRequest(int fd)
 		//+ Static Handler: always a response ready even if it fails. So we return after
 		if (!handler.isCGI())
 		{
-			//handler.executeStatic(); //* this may throw (only if you dont find the error page inside location)
-			//single_response = handler->client->_response.buildResponseStr();
-			single_response = process_and_build_response(c);
+			StaticHandler static_handler(handler);
+			if (handler.getMethod() == "GET")
+				static_handler.Get();
+			else if (handler.getMethod() == "POST")
+				static_handler.Post();
+			else if (handler.getMethod() == "DELETE")
+				static_handler.Delete();
+			else
+				throw HttpException(405, "Method Not Allowed");
+
 			finishRequestCycle(c); //+ Cleanup http request
+			single_response = buildStaticSuccessResponse(static_handler, c->getKeepAlive());
 			this->prepareToSend(fd, c, single_response);
 			return true;
 		}
@@ -400,6 +470,7 @@ bool	AServer::handleCompleteRequest(int fd)
 		writeLog(ss.str(), STATUS_CODE);
 		single_response = this->buildErrorResponse(handler, e.getCode());
 		finishRequestCycle(c); //+ Cleanup http request
+		c->setKeepAlive(shouldKeepAliveForError(handler, e.getCode()));
 		this->prepareToSend(fd, c, single_response);
 		return true;
 	}
@@ -654,8 +725,11 @@ void	AServer::monitorCGI()
 			oss << *(it->second) << " --> CGI Timeout";
 			writeLog(oss.str(), SERVER_EVENTS); 
 
+			Client *client = it->second->getClient();
+			bool keep_alive = shouldKeepAliveForError(*(it->second), 504);
+			client->setKeepAlive(keep_alive);
 			std::string single_response = this->buildErrorResponse(*(it->second), 504);
-			this->prepareToSend(it->second->getClient()->getFd(), it->second->getClient(), single_response);
+			this->prepareToSend(client->getFd(), client, single_response);
 
 			//+ Kill Cgi
 			this->cgiDisconnect(it->first);

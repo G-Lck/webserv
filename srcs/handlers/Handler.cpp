@@ -37,13 +37,13 @@ Handler::~Handler() {}
 ///			return true, otherwise returns false.
 bool	Handler::isCGI() const
 {
-    const std::string &cgi_path = this->_location.getCgiHandler().first;
-    if (cgi_path.empty())
-        return false;
-    if (this->_path.length() < cgi_path.length())
+	const std::string &cgi_path = this->_location.getCgiHandler().first;
+	if (cgi_path.empty())
+		return false;
+	if (this->_path.length() < cgi_path.length())
 		return false;
 	if (this->_path.compare(this->_path.length() - cgi_path.length(), cgi_path.length(), cgi_path) == 0)
-    	return true;
+		return true;
 	return (false);
 }  //~ CHECK THIS
 
@@ -58,7 +58,7 @@ void	Handler::findServer(const std::vector<ServerConfig> &virtual_servers)
 {
 	std::string name = "default_server";
 	std::map<std::string, std::string> headers = this->_http_request.getHeaders();
-	std::map<std::string, std::string>::const_iterator host_it = headers.find("Host");
+	std::map<std::string, std::string>::const_iterator host_it = headers.find("host");
 
 	if (host_it != headers.end())
 	{
@@ -137,7 +137,10 @@ void	Handler::findLocation()
 void	Handler::checkRedirection()
 {
 	if (this->_location.getReturnCode() != 0)
-		throw HttpException(this->_location.getReturnCode(), this->_location.getReturnUrl());
+	{
+		this->setResponseHeader("Location", this->_location.getReturnUrl());
+		throw HttpException(this->_location.getReturnCode(), "Redirect");
+	}
 }
 
 /// @brief check if the method of the HttpRequest is allowed in this location.
@@ -145,8 +148,20 @@ void	Handler::checkMethod()
 {
 	this->_method = this->_http_request.getMethod();
 	const std::vector<std::string> &allowed_methods = this->_location.getAllowMethods();
-	if (std::find(allowed_methods.begin(), allowed_methods.end(), this->_method) == allowed_methods.end())
-		throw HttpException(405, "Method Not Allowed");
+
+	if (std::find(allowed_methods.begin(), allowed_methods.end(), this->_method) != allowed_methods.end())
+		return;
+
+	std::string allow_value;
+	for (size_t i = 0; i < allowed_methods.size(); ++i)
+	{
+		if (i > 0)
+			allow_value += ", ";
+		allow_value += allowed_methods[i];
+	}
+
+	this->setResponseHeader("Allow", allow_value);
+	throw HttpException(405, "Method Not Allowed");
 }
 
 /// @brief ../ is forbidden in order to avoid back attack. And because we don't need to do
@@ -193,7 +208,7 @@ void	Handler::validateStatic()
 bool	Handler::validContentLength()
 {
 	const std::map<std::string, std::string> headers = this->getRequestHandler().getHeaders();
-	std::map<std::string, std::string>::const_iterator it = headers.find("Content-Length");
+	std::map<std::string, std::string>::const_iterator it = headers.find("content-length");
 
 	if (it == headers.end()) //+ Extra check if not found (we check that in the parser anyways)
 		throw HttpException(411, "The request did not specify the length of its content");
@@ -239,6 +254,17 @@ const std::string& Handler::getPath() const { return this->_path; }
 
 const std::string&	Handler::getServerName() const { return (this->_server_name); }
 
+const std::map<std::string, std::string>& Handler::getResponseHeaders() const
+{
+	return this->_response_headers;
+}
+
+// ---------- SETTERS ------------
+
+void Handler::setResponseHeader(const std::string &key, const std::string &value)
+{
+	this->_response_headers[key] = value;
+}
 
 // ---------- ERROR PAGES ----------
 
@@ -246,9 +272,9 @@ bool Handler::hasErrorPage(int code) const { return this->_location.getErrorPage
 
 std::string	Handler::CreateErrorPageContent(int code) const
 {
-    if (this->hasErrorPage(code))
-    {
-        std::map<int, std::string>::const_iterator it = this->_location.getErrorPages().find(code);
+	if (this->hasErrorPage(code))
+	{
+		std::map<int, std::string>::const_iterator it = this->_location.getErrorPages().find(code);
 		std::ifstream file(it->second.c_str());
 		if (file.is_open() && file.good())
 		{
@@ -256,6 +282,6 @@ std::string	Handler::CreateErrorPageContent(int code) const
 			content << file.rdbuf();
 			return content.str();
 		}
-    }
+	}
 	return ""; // should return the default one
 }
