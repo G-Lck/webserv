@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Birds of Geneva</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2rem; background: #f7f9fc; }
+    h1 { color: #2c3e50; }
+    .card { background: white; padding: 1rem; margin: 1rem 0; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+    img { max-width: 220px; border-radius: 6px; }
+    form { margin-top: 2rem; background: white; padding: 1rem; border-radius: 8px; }
+    input, textarea { display: block; margin: 0.5rem 0; width: 100%; max-width: 400px; }
+  </style>
+</head>
+<body>
+  <h1>Birds of Geneva</h1>
+  <p>Here are our favorit birds around Geneva.</p>
+
+  <div class="card">
+    <h2>Seagull</h2>
+    <img src="images/Seagull.png" alt="Seagull">
+    <p>Seagulls are often seen around Lake Geneva and the city quays.</p>
+  </div>
+
+
+  <h2>Feel free to add yours</h2>
+  <form action="/upload" method="post" enctype="multipart/form-data">
+    <label>Bird name</label>
+    <input type="text" name="name" required>
+
+    <label>Comment</label>
+    <textarea name="comment" rows="4" required></textarea>
+
+    <label>Image</label>
+    <input type="file" name="image" accept="image/*" required>
+
+    <button type="submit">Send</button>
+  </form>
+</body>
+</html>

@@ -103,9 +103,13 @@ void	PollServer::run(void)
 				continue;
 			}
 			if (events & POLLIN)
+				this->refreshClientTime(current_fd);
+			if (events & POLLIN)
 				this->readRequest(current_fd);
 			if (this->_clients.find(current_fd) == this->_clients.end())
 				continue;
+			if (events & POLLOUT)
+				this->refreshClientTime(current_fd);
 			if (events & POLLOUT)
 				this->sendResponse(current_fd);
 			if (this->_clients.find(current_fd) == this->_clients.end())
@@ -138,13 +142,13 @@ void	PollServer::handleCgiEvent(int fd, short poll_events)
 
 	if (cgi == NULL)
 		return;
-	int stdin_fd = cgi->getStdinFd();
-	int stdout_fd = cgi->getStdoutFd();
-	if ((poll_events & POLLOUT) && fd == cgi->getStdinFd())
+	int stdin_fd = cgi->getParentFdOut();
+	int stdout_fd = cgi->getParentFdIn();
+	if ((poll_events & POLLOUT) && fd == cgi->getParentFdOut())
 	{
 		cgi->continueWriting();
 	}
-	else if ((poll_events & POLLIN) && fd == cgi->getStdoutFd())
+	else if ((poll_events & POLLIN) && fd == cgi->getParentFdIn())
 	{
 		cgi->continueReading();
 	}

@@ -7,6 +7,9 @@
 class StaticHandler: public Handler
 {
 	private:
+		int			_status_code;
+		std::string	_response_body;
+		std::string	_content_type;
 		StaticHandler(const StaticHandler& other);
 	public:
 		StaticHandler();
@@ -27,6 +30,10 @@ class StaticHandler: public Handler
 		
 		// Delete //
 		void	CanDelete();
+
+		int				getStatusCode() const;
+		const std::string&	getResponseBody() const;
+		const std::string&	getContentType() const;
 };
 
 #endif
