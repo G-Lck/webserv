@@ -147,18 +147,32 @@ void	PollServer::handleCgiEvent(int fd, short poll_events)
 	if ((poll_events & POLLOUT) && fd == cgi->getParentFdOut())
 	{
 		cgi->continueWriting();
+		if (cgi->finishedWriting())
+		{
+			this->removeFdFromMultiplexer(stdin_fd);
+			this->removeCgiFromMap(stdin_fd);
+			cgi->closeParentFdOut();
+			this->addCgiToMap(stdout_fd, cgi);
+			this->addFdToMultiplexer(stdout_fd);
+			this->watchForRead(stdout_fd);
+		}
 	}
-	else if ((poll_events & POLLIN) && fd == cgi->getParentFdIn())
+	else if ((poll_events & (POLLIN | POLLHUP)) && fd == cgi->getParentFdIn())
 	{
 		cgi->continueReading();
 	}
 	if (cgi->isFinished())
 	{
+		cgi->parseCgiResponse();
+		HttpResponse response = cgi->getResponseHandler();
+		this->prepareToSend(cgi->getClient()->getFd(), cgi->getClient(), response.buildResponseStr());
 		if (stdin_fd != -1)
 			this->removeFdFromMultiplexer(stdin_fd);
 		if (stdout_fd != -1 && stdout_fd != stdin_fd)
 			this->removeFdFromMultiplexer(stdout_fd);
-		this->cgiDisconnect(stdout_fd);
+		this->removeCgiFromMap(stdout_fd);
+		cgi->closeAllFd();
+		delete cgi;
 	}
 }
 

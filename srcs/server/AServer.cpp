@@ -456,9 +456,20 @@ bool	AServer::handleCompleteRequest(int fd)
 				delete cgi; //* Still need to check for a safe destructor por the kill(pid)
 				throw ;
 			}
-			this->addCgiToMap(cgi->getParentFdOut(), cgi);
-			this->addFdToMultiplexer(cgi->getParentFdOut());
-			this->watchForWrite(cgi->getParentFdOut());
+			if (cgi->getWriteBuffer().empty())
+			{
+				cgi->continueWriting();
+				cgi->closeParentFdOut();
+				this->addCgiToMap(cgi->getParentFdIn(), cgi);
+				this->addFdToMultiplexer(cgi->getParentFdIn());
+				this->watchForRead(cgi->getParentFdIn());
+			}
+			else
+			{
+				this->addCgiToMap(cgi->getParentFdOut(), cgi);
+				this->addFdToMultiplexer(cgi->getParentFdOut());
+				this->watchForWrite(cgi->getParentFdOut());
+			}
 			finishRequestCycle(c); //+ Cleanup request class, everything was read
 			return false;
 		}

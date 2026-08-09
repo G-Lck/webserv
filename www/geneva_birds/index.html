@@ -10,6 +10,10 @@
     img { max-width: 220px; border-radius: 6px; }
     form { margin-top: 2rem; background: white; padding: 1rem; border-radius: 8px; }
     input, textarea { display: block; margin: 0.5rem 0; width: 100%; max-width: 400px; }
+    #upload-status { min-height: 1.4em; font-weight: bold; }
+    #gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; }
+    #gallery img { width: 100%; max-width: none; max-height: 220px; object-fit: cover; }
+    .gallery-empty { color: #52616b; }
   </style>
 </head>
 <body>
@@ -24,7 +28,7 @@
 
 
   <h2>Feel free to add yours</h2>
-  <form action="/upload" method="post" enctype="multipart/form-data">
+  <form id="upload-form" action="cgi/gallery.py" method="post" enctype="multipart/form-data">
     <label>Bird name</label>
     <input type="text" name="name" required>
 
@@ -35,6 +39,73 @@
     <input type="file" name="image" accept="image/*" required>
 
     <button type="submit">Send</button>
+    <p id="upload-status" role="status"></p>
   </form>
+
+  <h2>Community birds</h2>
+  <section id="gallery" aria-live="polite"></section>
+
+  <script>
+    const gallery = document.getElementById('gallery');
+    const status = document.getElementById('upload-status');
+    const pageUrl = new URL(window.location.href);
+    if (!pageUrl.pathname.endsWith('/')) pageUrl.pathname += '/';
+    const galleryUrl = new URL('cgi/gallery.py', pageUrl).pathname;
+    const uploadsUrl = new URL('uploads/', pageUrl).pathname;
+    document.getElementById('upload-form').action = galleryUrl;
+
+    function makeCard(bird) {
+      const card = document.createElement('article');
+      card.className = 'card';
+      const image = document.createElement('img');
+      image.src = uploadsUrl + encodeURIComponent(bird.filename);
+      image.alt = bird.name || bird.filename;
+      const title = document.createElement('h3');
+      title.textContent = bird.name || bird.filename;
+      const text = document.createElement('p');
+      text.textContent = bird.comment || '';
+      card.append(image, title, text);
+      return card;
+    }
+
+    async function loadGallery() {
+      gallery.replaceChildren();
+      try {
+        const response = await fetch(galleryUrl, { cache: 'no-store' });
+        if (!response.ok) throw new Error('gallery unavailable');
+        const payload = await response.json();
+        if (!payload.birds.length) {
+          gallery.textContent = 'No uploaded birds yet.';
+          gallery.className = 'gallery-empty';
+          return;
+        }
+        gallery.className = '';
+        payload.birds.forEach((bird) => gallery.appendChild(makeCard(bird)));
+      } catch (_) {
+        gallery.textContent = 'The gallery is unavailable for now.';
+        gallery.className = 'gallery-empty';
+      }
+    }
+
+    document.getElementById('upload-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      status.textContent = 'Uploading...';
+      try {
+        const response = await fetch(form.action, {
+          method: 'POST',
+          body: new FormData(form)
+        });
+        if (!response.ok) throw new Error('Upload failed (' + response.status + ').');
+        form.reset();
+        status.textContent = 'Your bird was uploaded.';
+        loadGallery();
+      } catch (error) {
+        status.textContent = error.message || 'Upload failed. Please try again.';
+      }
+    });
+
+    loadGallery();
+  </script>
 </body>
 </html>

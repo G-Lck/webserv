@@ -182,6 +182,7 @@ void	Handler::initAndParseHandler(const std::vector<ServerConfig> &virtual_serve
 	checkDotsPath();
 	findServer(virtual_servers);
 	findLocation();
+	validateBodySize();
 	checkRedirection();
 	checkMethod();
 	constructPath();
@@ -261,6 +262,12 @@ const std::map<std::string, std::string>& Handler::getResponseHeaders() const
 	return this->_response_headers;
 }
 
+void	Handler::validateBodySize() const
+{
+	if (this->_http_request.getBody().size() > static_cast<size_t>(this->_location.getClientMaxBodySize()))
+		throw HttpException(413, "Payload Too Large");
+}
+
 // ---------- SETTERS ------------
 
 void Handler::setResponseHeader(const std::string &key, const std::string &value)
@@ -277,7 +284,8 @@ std::string	Handler::CreateErrorPageContent(int code) const
 	if (this->hasErrorPage(code))
 	{
 		std::map<int, std::string>::const_iterator it = this->_location.getErrorPages().find(code);
-		std::ifstream file(it->second.c_str());
+		std::string error_page_path = "." + this->_location.getRoot() + it->second;
+		std::ifstream file(error_page_path.c_str());
 		if (file.is_open() && file.good())
 		{
 			std::ostringstream content;

@@ -57,6 +57,7 @@ class Handler
 		const std::string&		getPath() const;
 		const std::string&		getServerName() const;
 		const std::map<std::string, std::string>&	getResponseHeaders() const;
+		void					validateBodySize() const;
 		void	setResponseHeader(const std::string &key, const std::string &value);
 
 		bool					hasErrorPage(int code) const;

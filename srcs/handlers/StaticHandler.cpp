@@ -1,5 +1,189 @@
 #include "../../includes/StaticHandler.hpp"
 #include "../../includes/ParseConfig.hpp"
+#include <cctype>
+
+/// @brief  easier to use a struct, to separate the name from the data
+struct MultipartPart
+{
+	std::string filename;
+	std::string data;
+};
+
+/// @brief Convert an ASCII string to lower case for case-insensitive HTTP comparisons.
+/// @return A lower-case copy of value.
+static std::string toLowerAscii(const std::string &value)
+{
+	std::string result = value;
+	for (size_t i = 0; i < result.size(); ++i)
+		result[i] = static_cast<char>(std::tolower(static_cast<unsigned char>(result[i])));
+	return result;
+}
+
+/// @brief Remove ASCII whitespace from string.
+/// @return A copy of value without whitespace.
+static std::string trim(const std::string &value)
+{
+	size_t begin = 0;
+	size_t end = value.size();
+	while (begin < end && std::isspace(static_cast<unsigned char>(value[begin])))
+		++begin;
+	while (end > begin && std::isspace(static_cast<unsigned char>(value[end - 1])))
+		--end;
+	return value.substr(begin, end - begin);
+}
+
+/// @brief Extract and validate the boundary parameter of a multipart Content-Type header.
+/// @param content_type Value of the Content-Type HTTP header.
+/// @return The multipart boundary without optional surrounding quotes.
+/// @exception HttpException 400 if the media type or boundary is invalid.
+static std::string getMultipartBoundary(const std::string &content_type)
+{
+	const std::string lower_content_type = toLowerAscii(content_type);
+	const size_t media_type_end = lower_content_type.find(';');
+	if (trim(lower_content_type.substr(0, media_type_end)) != "multipart/form-data")
+		throw HttpException(400, "Bad Request");
+
+	size_t parameter = media_type_end;
+	while (parameter != std::string::npos && parameter < content_type.size())
+	{
+		parameter = content_type.find_first_not_of("; \t", parameter);
+		if (parameter == std::string::npos)
+			break;
+		size_t parameter_end = content_type.find(';', parameter);
+		std::string current = trim(content_type.substr(parameter, parameter_end - parameter));
+		size_t equal = current.find('=');
+		if (equal != std::string::npos && toLowerAscii(trim(current.substr(0, equal))) == "boundary")
+		{
+			std::string boundary = trim(current.substr(equal + 1));
+			if (boundary.size() >= 2 && boundary[0] == '"' && boundary[boundary.size() - 1] == '"')
+				boundary = boundary.substr(1, boundary.size() - 2);
+			if (boundary.empty() || boundary.size() > 70 || boundary.find_first_of("\r\n") != std::string::npos)
+				throw HttpException(400, "Bad Request");
+			return boundary;
+		}
+		parameter = parameter_end;
+	}
+	throw HttpException(400, "Bad Request");
+}
+
+/// @brief Extract the optional filename parameter from a Content-Disposition header.
+/// @param disposition Value of a multipart part's Content-Disposition header.
+/// @return The filename, or an empty string when the part is not a file.
+/// @exception HttpException 400 if the disposition type is invalid.
+static std::string getFilenameFromDisposition(const std::string &disposition)
+{
+	size_t parameter = disposition.find(';');
+	if (toLowerAscii(trim(disposition.substr(0, parameter))) != "form-data")
+		throw HttpException(400, "Bad Request");
+	while (parameter != std::string::npos && parameter < disposition.size())
+	{
+		parameter = disposition.find_first_not_of("; \t", parameter);
+		if (parameter == std::string::npos)
+			break;
+		size_t parameter_end = disposition.find(';', parameter);
+		std::string current = trim(disposition.substr(parameter, parameter_end - parameter));
+		size_t equal = current.find('=');
+		if (equal != std::string::npos && toLowerAscii(trim(current.substr(0, equal))) == "filename")
+		{
+			std::string filename = trim(current.substr(equal + 1));
+			if (filename.size() >= 2 && filename[0] == '"' && filename[filename.size() - 1] == '"')
+				filename = filename.substr(1, filename.size() - 2);
+			return filename;
+		}
+		parameter = parameter_end;
+	}
+	return "";
+}
+
+/// @brief Validate a client-provided filename and reduce it to a safe basename.
+/// @param filename Filename extracted from Content-Disposition.
+/// @return A safe filename that cannot select another directory.
+/// @exception HttpException 400 if the filename is unsafe or invalid.
+static std::string sanitizeUploadFilename(const std::string &filename)
+{
+	std::string safe_name = filename;
+	size_t separator = safe_name.find_last_of("/\\");
+	if (separator != std::string::npos)
+		safe_name = safe_name.substr(separator + 1);
+	if (safe_name.empty() || safe_name == "." || safe_name == ".." || safe_name.find("..") != std::string::npos)
+		throw HttpException(400, "Bad Request");
+	for (size_t i = 0; i < safe_name.size(); ++i)
+	{
+		if (safe_name[i] == '\0' || static_cast<unsigned char>(safe_name[i]) < 32)
+			throw HttpException(400, "Bad Request");
+	}
+	return safe_name;
+}
+
+/// @brief Parse file parts from a complete multipart/form-data request body.
+/// @param body Complete HTTP request body.
+/// @param boundary Boundary extracted from the Content-Type header.
+/// @return All file parts, excluding regular form fields without a filename.
+/// @exception HttpException 400 if the multipart body format is malformed.
+static std::vector<MultipartPart> parseMultipartBody(const std::string &body, const std::string &boundary)
+{
+	const std::string delimiter = "--" + boundary;
+	if (body.compare(0, delimiter.size(), delimiter) != 0 || body.size() < delimiter.size() + 2)
+		throw HttpException(400, "Bad Request");
+
+	std::vector<MultipartPart> parts;
+	size_t position = delimiter.size();
+	if (body.compare(position, 2, "--") == 0)
+		return parts;
+	if (body.compare(position, 2, "\r\n") != 0)
+		throw HttpException(400, "Bad Request");
+	position += 2;
+
+	while (position < body.size())
+	{
+		size_t headers_end = body.find("\r\n\r\n", position);
+		if (headers_end == std::string::npos)
+			throw HttpException(400, "Bad Request");
+
+		std::string disposition;
+		std::istringstream header_stream(body.substr(position, headers_end - position));
+		std::string header;
+		while (std::getline(header_stream, header))
+		{
+			if (!header.empty() && header[header.size() - 1] == '\r')
+				header.erase(header.size() - 1);
+			size_t colon = header.find(':');
+			if (colon == std::string::npos)
+				throw HttpException(400, "Bad Request");
+			if (toLowerAscii(trim(header.substr(0, colon))) == "content-disposition")
+				disposition = trim(header.substr(colon + 1));
+		}
+		if (disposition.empty())
+			throw HttpException(400, "Bad Request");
+
+		position = headers_end + 4;
+		size_t next_boundary = body.find("\r\n" + delimiter, position);
+		if (next_boundary == std::string::npos)
+			throw HttpException(400, "Bad Request");
+
+		std::string filename = getFilenameFromDisposition(disposition);
+		if (!filename.empty())
+		{
+			MultipartPart part;
+			part.filename = sanitizeUploadFilename(filename);
+			part.data = body.substr(position, next_boundary - position);
+			parts.push_back(part);
+		}
+
+		position = next_boundary + 2 + delimiter.size();
+		if (body.compare(position, 2, "--") == 0)
+		{
+			position += 2;
+			if (position != body.size() && body.compare(position, 2, "\r\n") != 0)
+				throw HttpException(400, "Bad Request");
+			return parts;
+		}
+		if (body.compare(position, 2, "\r\n") != 0)
+			throw HttpException(400, "Bad Request");
+		position += 2;
+	}
+	throw HttpException(400, "Bad Request");
+}
 
 /// @brief  check if the path exist and return true or false if it's a dir or not
 
@@ -92,22 +276,6 @@ static std::string extractFilename(const std::string &path)
 	return path.substr(pos + 1);
 }
 
-/// @brief if it's a multipart it should begin by -- and end with \r\n--
-
-static std::string extractMultipartPayload(const std::string &body)
-{
-	size_t headers_end = body.find("\r\n\r\n");
-	if (headers_end == std::string::npos)
-		throw HttpException(400, "Bad Request");
-
-	size_t payload_start = headers_end + 4;
-	size_t last_boundary = body.rfind("\r\n--");
-	if (last_boundary == std::string::npos || last_boundary < payload_start)
-		throw HttpException(400, "Bad Request");
-
-	return body.substr(payload_start, last_boundary - payload_start);
-}
-
 StaticHandler::StaticHandler() : _status_code(200), _response_body(""), _content_type("text/plain") {}
 
 StaticHandler::StaticHandler(const Handler& other) : Handler(other), _status_code(200), _response_body(""), _content_type("text/plain") {}
@@ -134,14 +302,13 @@ void	StaticHandler::Get()
 	//if file
 	//	GetFile
 	this->_status_code = 200;
-	if (!isValidFile(this->_path, F_OK))
-		throw HttpException(404, "Not Found");
-
 	if (isDirectoryPath(this->_path))
 	{
 		this->GetDirectory();
 		return;
 	}
+	if (!isValidFile(this->_path, F_OK))
+		throw HttpException(404, "Not Found");
 	this->GetFile();
 
 		
@@ -151,19 +318,34 @@ void	StaticHandler::Get()
 /// @exception 403, 404, 507, 500
 void	StaticHandler::Post()
 {
-	// if content-type == multipart-data
-	//	this->parseMultipartData();
-	// check if we can open the file
-	// check if we can write in the file
-	// post and build the 201 response
 	const std::map<std::string, std::string> headers = this->getRequestHandler().getHeaders();
 	std::map<std::string, std::string>::const_iterator ct_it = headers.find("content-type");
 	std::string body_to_write = this->getRequestHandler().getBody();
 
 	if (ct_it != headers.end() && ct_it->second.find("multipart/form-data") != std::string::npos)
 	{
-		this->parseMultipartData();
-		body_to_write = extractMultipartPayload(body_to_write);
+		const std::string &upload_root = this->_location.getUploadPath();
+		if (upload_root.empty())
+			throw HttpException(403, "Forbidden");
+
+		std::vector<MultipartPart> parts = parseMultipartBody(body_to_write, getMultipartBoundary(ct_it->second));
+		if (parts.empty())
+			throw HttpException(400, "Bad Request");
+
+		for (size_t i = 0; i < parts.size(); ++i)
+		{
+			std::ofstream out(joinPath("." + upload_root, parts[i].filename).c_str(), std::ios::out | std::ios::binary | std::ios::trunc);
+			if (!out.is_open())
+				throw HttpException(403, "Forbidden");
+			out.write(parts[i].data.c_str(), static_cast<std::streamsize>(parts[i].data.size()));
+			if (!out.good())
+				throw HttpException(500, "Internal Server Error in Post");
+		}
+
+		this->_status_code = 201;
+		this->_response_body = "Created\n";
+		this->_content_type = "text/plain";
+		return;
 	}
 
 	std::string target_path = this->_path;
@@ -202,7 +384,7 @@ void	StaticHandler::Delete()
 /// @exception 403, 500
 void	StaticHandler::GetDirectory()
 {
-	if (!isValidFile(this->_path, R_OK))
+	if (access(this->_path.c_str(), R_OK) != 0)
 		throw HttpException(403, "Forbidden");
 
 	if (this->_location.getAutoindex())
@@ -249,12 +431,7 @@ void	StaticHandler::parseMultipartData()
 	if (ct_it->second.find("multipart/form-data") == std::string::npos)
 		return;
 
-	if (ct_it->second.find("boundary=") == std::string::npos)
-		throw HttpException(400, "Bad Request");
-
-	const std::string &body = this->getRequestHandler().getBody();
-	if (body.find("\r\n\r\n") == std::string::npos)
-		throw HttpException(400, "Bad Request");
+	parseMultipartBody(this->getRequestHandler().getBody(), getMultipartBoundary(ct_it->second));
 
 }
 

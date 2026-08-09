@@ -103,7 +103,7 @@ void	CgiHandler::setEnvVars()
 	this->_envStrings.push_back("REQUEST_METHOD=" + req.getMethod());
 	this->_envStrings.push_back("QUERY_STRING=" + req.getQueryString());
 
-	h_it = headers.find("Content-Type");
+	h_it = headers.find("content-type");
 	if (h_it != headers.end())
 		this->_envStrings.push_back("CONTENT_TYPE=" + h_it->second);
 	if (req.getMethod() == "POST")
@@ -130,7 +130,7 @@ void	CgiHandler::setEnvVars()
 	//+ Headers
 	for (h_it = headers.begin(); h_it != headers.end(); h_it++)
 	{
-		if (h_it->first == "Content-Type" || h_it->first == "Content-Length" || h_it->first == "Connection")
+		if (h_it->first == "content-type" || h_it->first == "content-length" || h_it->first == "connection")
 			continue ;
 		this->_envStrings.push_back(headerToCgiFormat(h_it->first, h_it->second));
 	}
@@ -194,8 +194,7 @@ void	CgiHandler::openPipe()
 	this->_childFdOut = fd_res[1];
 
     //+ error checking for fcntl
-    if (fcntl(fd_res[0], F_SETFL, O_NONBLOCK) < 0 || fcntl(fd_req[0], F_SETFL, O_NONBLOCK) < 0 ||
-			fcntl(fd_res[1], F_SETFL, O_NONBLOCK) < 0 || fcntl(fd_req[1], F_SETFL, O_NONBLOCK) < 0)
+	if (fcntl(fd_res[0], F_SETFL, O_NONBLOCK) < 0 || fcntl(fd_req[1], F_SETFL, O_NONBLOCK) < 0)
 	{
 		std::stringstream err;
 		err << "fnctl err: " << strerror(errno);
