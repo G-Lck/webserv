@@ -18,6 +18,6 @@ std::string		getEpollCtlErrorStr( int err );
 
 std::string		getSendErrorStr( int err );
 
-std::string		stringifyConfig(GlobalConfig &config, int flag);
+std::string		stringifyConfig(GlobalConfig &config);
    
 #endif

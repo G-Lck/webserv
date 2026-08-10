@@ -1,0 +1,24 @@
+root /www;
+index index.html;
+autoindex off;
+client_max_body_size 10000;
+
+server {
+    listen 8085;
+    server_name localhost;
+    error_page 404 /error/404.html;
+    autoindex off;
+    client_max_body_size 5000;
+    cgi_handler .py /usr/bin/python3;
+
+    location / {
+        limit_except GET;
+        autoindex off;
+    }
+
+    location /upload {
+        limit_except POST;
+        upload_path /www/uploads;
+        autoindex off;
+    }
+}

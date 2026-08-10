@@ -31,6 +31,7 @@ all: $(NAME)
 $(NAME) : $(OBJ)
 		$(CPP) $(FLAGS) $(OBJ) -o $@
 		./config/generate-config.sh
+		rm -f ./log/*.log
 
 %.o : %.cpp
 		$(CPP) $(FLAGS) -c $< -o $@
@@ -43,6 +44,6 @@ fclean: clean
 re: fclean all
 
 cleanlog:
-		rm ./log/*.log
+		rm -f ./log/*.log
 
-.PHONY: all clean fclean re
+.PHONY: all clean fclean re cleanlog

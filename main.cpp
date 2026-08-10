@@ -5,23 +5,28 @@
 #include "./includes/PollServer.hpp"
 #include "./includes/utils.hpp"
 
+bool g_log = true;
+
 int	main( int ac, char **av )
 {
 	if (ac < 2)
 	{
-		std::cout << "Wrong amount of parameters\nUsage: ./WebServ + [dir-to-config-file]. \nOr Flag --test-config to test parsing" << std::endl;
+		std::cout << "Wrong amount of parameters\nUsage: ./WebServ + [dir-to-config-file]. + \nOr Flag --test-config to test parsing\nOr Flag --no-log to deactivate the logs" << std::endl;
 		return (-1);
 	}
 	signal(SIGCHLD, SIG_IGN);
 	bool testMode = (ac >= 3 && std::string(av[2]) == "--test-config");
+	if ((ac >= 3 && std::string(av[2]) == "--no-log"))
+		g_log = false;
+
 	GlobalConfig	Config;
 	
 	try
 	{
-		ParseConfig		Parse(av[1]);
+		ParseConfig     Parse(av[1]);
 		Parse.parse(Config);
 		printConfig(Config, 1);
-		writeLog(stringifyConfig(Config, 1), 1);
+		writeLog(stringifyConfig(Config), 1);
 		if (testMode)
 			return (0);
 	}
@@ -29,8 +34,6 @@ int	main( int ac, char **av )
 	{
 		std::cerr << e.what() << '\n';
 		printConfig(Config, 0);
-		if (testMode)
-			std::cout << stringifyConfig(Config, 1) << std::endl;
 		return (1);
 	}
 

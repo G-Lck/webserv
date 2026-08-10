@@ -5,6 +5,8 @@
 /// @param flag INFO | STATUS_CODE | ACCESS | SERVER_EVENTS | ERROR_INFO | ERROR_WARNING
 void	writeLog( const std::string msg, int flag )
 {
+	if (!g_log)
+		return ;
 	time_t	now;
 	time(&now);
 	char *t = ctime(&now);

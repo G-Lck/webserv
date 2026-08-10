@@ -615,8 +615,8 @@ void	ParseConfig::locParseReturnCode(std::vector<std::string>::iterator &it, Loc
 		throw ParseErrException("Error\nReturn code must be numeric.");
 	
 	int code = std::atoi((*it).c_str());
-	if (code != 301 && code != 302 && code != 307 && code != 308) //+ Check valid code
-		throw ParseErrException("Error\nInvalid return code (must be 301, 302, 307, or 308).");
+	if (code < 301 || code > 308) //+ Check valid code
+		throw ParseErrException("Error\nInvalid return code (must be 301 - 308).");
 	
 	it++; // Move to URL
 	

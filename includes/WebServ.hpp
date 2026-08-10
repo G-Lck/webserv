@@ -73,6 +73,7 @@ enum LogFiles
 // --- POSIX time ---
 #include <ctime>
 
+extern bool g_log;
 
 class GlobalConfig;
 

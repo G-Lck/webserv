@@ -211,7 +211,7 @@ void printConfig(GlobalConfig &config, int flag)
 
 /// @brief Builds the whole config as a string
 /// @param flag To use 1 when expected to pass, 0 when expected to fail
-std::string stringifyConfig(GlobalConfig &config, int flag)
+std::string stringifyConfig(GlobalConfig &config)
 {
 	std::ostringstream oss;
 
@@ -288,12 +288,6 @@ std::string stringifyConfig(GlobalConfig &config, int flag)
 			oss << std::endl;
 		}
 	}
-
-	if (flag == 1)
-		oss << "\nParser passed." << std::endl;
-	if (flag == 0)
-		oss << "\nParser Failed." << std::endl;
-
 	return oss.str();
 }
 

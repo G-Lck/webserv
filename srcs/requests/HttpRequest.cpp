@@ -167,7 +167,7 @@ bool HttpRequest::parseChunkedBody(const std::string& raw) // we should check th
 /// @return true if we have a complete request with his body if applicable, false otherwise.
 bool HttpRequest::parse(const std::string& raw)
 {
-	std::cout << "http request parser begin" << std::endl;
+	//std::cout << "http request parser begin" << std::endl;
 	this->_consumed_bytes = 0;
 
 	size_t	header_end = raw.find("\r\n\r\n");
