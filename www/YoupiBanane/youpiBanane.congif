@@ -1,18 +1,35 @@
 root /www;
 index index.html;
 autoindex off;
-client_max_body_size 10000;
+client_max_body_size 10000000;
 
 server {
     listen 8085;
     server_name localhost;
+
     error_page 404 /error/404.html;
+
     autoindex off;
-    client_max_body_size 5000;
+    client_max_body_size 5000000;
+
     cgi_handler .py /usr/bin/python3;
+    cgi_handler .bla ./cgi_tester;
 
     location / {
         limit_except GET;
+        autoindex off;
+    }
+
+    location /post_body {
+        limit_except POST;
+        client_max_body_size 100000;
+        autoindex off;
+    }
+
+    location /directory/ {
+        root /www/YoupiBanane;
+        limit_except GET;
+        index youpi.bad_extension;
         autoindex off;
     }
 
