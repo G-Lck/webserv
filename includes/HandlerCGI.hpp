@@ -41,8 +41,8 @@ class CgiHandler : public Handler
 		
 		//+ Execution
 		void	openPipe();
-		void	continueReading();
-		void	continueWriting();
+		bool	continueReading();
+		bool	continueWriting();
 		void	closeParentFdOut();
 		void	parseCgiResponse();
 		bool	splitHeadersAndBody();

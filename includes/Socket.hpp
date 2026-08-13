@@ -1,7 +1,7 @@
 #ifndef SOCKET_HPP
 # define SOCKET_HPP
 
-#define BACKLOG 100 //+ Check socketListen()
+#define BACKLOG 200 //+ Check socketListen()
 
 #include "WebServ.hpp"
 

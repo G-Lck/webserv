@@ -226,9 +226,6 @@ void	CgiHandler::openPipe()
 			exit(-1);
 		}
 		closeAllFd();
-		//~ CHECK IF WE NEED TO CLOSE ALL FD NOW OR NOT
-		// pass env var
-		//EXECUTE THE CGI
 
 		// build argv
 		char *argv[] = {
@@ -259,12 +256,31 @@ void	CgiHandler::openPipe()
 // ---------- REQUEST/RESPONSE PROCESING ----------
 
 
-void	CgiHandler::continueReading()
+bool	CgiHandler::continueReading()
 {
 	char buffer[4096];
 
 	//+ read (some) data from fd into handler's read buffer
 	ssize_t n = read(_parentFdIn, buffer, sizeof(buffer));
+	if (n < 0)
+	{
+		//+ man read(): EAGAIN or EWOULDBLOCK: The socket is marked nonblocking and the receive operation
+		//+ would block, or a receive timeout had been set and the
+		//+ timeout expired before data was received.
+		//+ EINTR  The receive was interrupted by delivery of a signal before any data was available
+		if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
+		{
+			std::stringstream ss;
+			ss << "read() error -> " << strerror(errno);
+			writeLog(ss.str(), ERROR_WARNING);
+			return (true);
+		}
+		//+ In any other case we log error
+		std::stringstream ss;
+		ss << "read() error -> " << strerror(errno);
+		writeLog(ss.str(), ERROR_INFO);
+		return (false);
+	}
 	
 	if (n > 0)
 	{		
@@ -277,19 +293,33 @@ void	CgiHandler::continueReading()
 	}
 	//+ Update Time
 	this->updateCgiTime();
-
-	// refresh client and cgi time
-    //     read available data from fd into handler's read buffer
-    //     if read returns 0 (EOF):
-    //         mark cgi output finished
-
-
+	return (true);
 }
 
-void	CgiHandler::continueWriting()
+bool	CgiHandler::continueWriting()
 {
 	//+ write next chunk of handler's write buffer to fd
 	ssize_t n = write(_parentFdOut, _writeBuffer.data() + _writeOffset, _writeBuffer.size() - _writeOffset);
+	if (n < 0)
+	{
+		//+ man write(): EAGAIN or EWOULDBLOCK: The socket is marked nonblocking and the receive operation
+		//+ would block, or a receive timeout had been set and the
+		//+ timeout expired before data was received.
+		//+ EINTR  The receive was interrupted by delivery of a signal before any data was available
+		if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
+		{
+			std::stringstream ss;
+			ss << "write() error -> " << strerror(errno);
+			writeLog(ss.str(), ERROR_WARNING);
+			return (true);
+		}
+		//+ In any other case we log error
+		std::stringstream ss;
+		ss << "write() error -> " << strerror(errno);
+		writeLog(ss.str(), ERROR_INFO);
+		return (false);
+	}
+
 	if (n > 0)
 		_writeOffset += n;
 	//+ Update Time
@@ -300,6 +330,7 @@ void	CgiHandler::continueWriting()
 	{
 		this->_finishedWritting = true;
 	}
+	return (true);
 }
 
 // ---------- CGI RESPONSE PARSING ----------

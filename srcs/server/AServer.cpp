@@ -679,6 +679,68 @@ bool	AServer::fdIsCgi(int fd) const
     return true;
 }
 
+void	AServer::prepareToReadFromCgi(int fd, CgiHandler *cgi)
+{
+	//+ Remove this fd from epoll
+	this->removeFdFromMultiplexer(fd);
+	//+ Remove from map<fd, cgiHandler>
+	this->removeCgiFromMap(fd);
+	//+ Close writting fd
+	cgi->closeParentFdOut();
+	//+ Add this handler back to the map with the readFd
+	this->addCgiToMap(cgi->getParentFdIn(), cgi);
+	//+ Add readFd to epoll
+	this->addFdToMultiplexer(cgi->getParentFdIn());
+	//+ Set EPOLLIN in the new Fd
+	this->watchForRead(cgi->getParentFdIn());
+	//+ Log
+	std::stringstream ss;
+	ss << "Cgi Handler [" << cgi->getPid() << "] finished writing to cgi: HttpRequest:" << cgi->getRequestHandler() <<", changing to read. ";
+	writeLog(ss.str(), SERVER_EVENTS);
+}
+
+void	AServer::handleRWCgiError(int fd)
+{
+	CgiHandler* cgi = this->getCgiHandler(fd);
+	//* cleanup:
+	int client_fd = cgi->getClient()->getFd();
+	//+ Remove this fd from epoll
+	this->removeFdFromMultiplexer(fd);
+
+	//+ Remove from map<fd, cgiHandler>
+	this->removeCgiFromMap(fd);
+
+	//+ Close all Fd
+	cgi->closeAllFd();
+	delete cgi;
+	this->clientDisconnect(client_fd);
+}
+
+void	AServer::makeResponseFromCgi(int fd)
+{
+	CgiHandler* cgi = this->getCgiHandler(fd);
+
+	cgi->parseCgiResponse();
+	HttpResponse response = cgi->getResponseHandler();
+	this->prepareToSend(cgi->getClient()->getFd(), cgi->getClient(), response.buildResponseStr());
+
+	//* cleanup:
+	//+ Remove this fd from epoll
+	this->removeFdFromMultiplexer(fd);
+
+	//+ Remove from map<fd, cgiHandler>
+	this->removeCgiFromMap(fd);
+
+	//+ Close all Fd
+	cgi->closeAllFd();
+
+	//+ Log
+	std::stringstream ss;
+	ss << "Cgi Handler [" << cgi->getPid() << "] finished reading, sending response. ";
+	writeLog(ss.str(), SERVER_EVENTS);
+
+	delete cgi;
+}
 
 // --------------- CLIENT MONITORING ---------------
 

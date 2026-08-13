@@ -63,7 +63,9 @@ class	AServer
 		CgiHandler*			getCgiHandler(int fd)	const;
 		bool				fdIsCgi(int fd) const;
 		void				cgiDisconnect(int fd);
-
+		void				prepareToReadFromCgi(int fd, CgiHandler *cgi);
+		void				handleRWCgiError(int fd);
+		void				makeResponseFromCgi(int fd);
 	public:
 		AServer();
 		virtual ~AServer();

@@ -166,66 +166,28 @@ void	EpollServer::closeEpoll(void)
 	this->_epoll_fd = -1;
 }
 
+
+
 void	EpollServer::handleCgiEvent(int fd, uint32_t epoll_event)
 {
 	CgiHandler* cgi = this->getCgiHandler(fd);
 	
 	if (cgi == NULL)
-	{
-		return ; //*should not happen, safety check, log?
-	}
+		return ; //*should not happen, safety check
     if (epoll_event & EPOLLOUT && fd == cgi->getParentFdOut())
 	{
-		//~ IF EPOLLHUP CHECK FOR ERRORS, RETURN CODE (CHECK EPOLLHUP AS WELL TO CHECK FOR CRASH DURING WRITING)
-		cgi->continueWriting();
+		if (!cgi->continueWriting())
+			handleRWCgiError(fd);
 		if (cgi->finishedWriting())
-		{
-			//+ Remove this fd from epoll
-			this->removeFdFromMultiplexer(fd);
-			//+ Remove from map<fd, cgiHandler>
-			this->removeCgiFromMap(fd);
-			//+ Close writting fd
-			cgi->closeParentFdOut();
-			//+ Add this handler back to the map with the readFd
-			this->addCgiToMap(cgi->getParentFdIn(), cgi);
-			//+ Add readFd to epoll
-			this->addFdToMultiplexer(cgi->getParentFdIn());
-			//+ Set EPOLLIN in the new Fd
-			this->watchForRead(cgi->getParentFdIn());
-			//+ Log
-			std::stringstream ss;
-			ss << "Cgi Handler [" << cgi->getPid() << "] finished writing to cgi: HttpRequest:" << cgi->getRequestHandler() <<", changing to read. ";
-			writeLog(ss.str(), SERVER_EVENTS);
-		}
+			this->prepareToReadFromCgi(fd, cgi);
 	}
 	else if ((epoll_event & EPOLLIN || epoll_event & EPOLLHUP) && fd == cgi->getParentFdIn())
 	{
-		//~ IF EPOLLHUP CHECK FOR ERRORS, RETURN CODE
-		cgi->continueReading(); //* check?
+		if (!cgi->continueReading())
+			handleRWCgiError(fd);
 	}
 	if (cgi->isFinished())
-	{
-		cgi->parseCgiResponse();
-		HttpResponse response = cgi->getResponseHandler();
-		this->prepareToSend(cgi->getClient()->getFd(), cgi->getClient(), response.buildResponseStr());
-
-    	//* cleanup:
-		//+ Remove this fd from epoll
-		this->removeFdFromMultiplexer(fd);
-
-		//+ Remove from map<fd, cgiHandler>
-		this->removeCgiFromMap(fd);
-
-		//+ Close all Fd
-		cgi->closeAllFd();
-
-		//+ Log
-		std::stringstream ss;
-		ss << "Cgi Handler [" << cgi->getPid() << "] finished reading, sending response. ";
-		writeLog(ss.str(), SERVER_EVENTS);
-
-		delete cgi;
-	}
+		makeResponseFromCgi(fd);
 }
 
 #else
