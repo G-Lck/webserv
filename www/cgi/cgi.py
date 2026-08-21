@@ -88,10 +88,58 @@ def show_environment():
 
     print("</body></html>")
 
+def get_response():
+    print("Content-Type: text/html")
+    print()
+    print("<h1>GET request</h1>")
+    print("Method: " + os.environ.get("REQUEST_METHOD", ""))
+
+
+def post_response():
+    print("Content-Type: text/html")
+    print()
+
+    length = int(os.environ.get("CONTENT_LENGTH", "0"))
+    body = sys.stdin.read(length)
+
+    print("<h1>POST request</h1>")
+    print("Method: " + os.environ.get("REQUEST_METHOD", ""))
+    print("Body: " + body)
+
+
+def relative_file_response():
+    print("Content-Type: text/plain")
+    print()
+
+    try:
+        with open("test.txt", "r") as f:
+            print("Relative file works!")
+            print(f.read())
+    except Exception as e:
+        print("Relative file failed:")
+        print(str(e))
+
+
+def error_response():
+    print("Content-Type: text/html")
+    print()
+    print("<h1>CGI error test</h1>")
+
+    raise Exception("Intentional CGI error")
+
+
+def infinite_loop():
+    print("Content-Type: text/html")
+    print()
+    print("<h1>CGI infinite loop test</h1>")
+    sys.stdout.flush()
+
+    while True:
+        time.sleep(1)
 
 # Change this to test different cases
 
-test = "slow"
+test = "redirect"
 
 
 if test == "normal":
@@ -129,3 +177,18 @@ elif test == "slow":
 
 elif test == "env":
     show_environment()
+
+elif test == "get":
+    get_response()
+
+elif test == "post":
+    post_response()
+
+elif test == "relative":
+    relative_file_response()
+
+elif test == "error":
+    error_response()
+
+elif test == "infinite":
+    infinite_loop()

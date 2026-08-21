@@ -320,7 +320,7 @@ bool	CgiHandler::continueWriting()
 		return (false);
 	}
 
-	if (n > 0)
+	if (n >= 0)
 		_writeOffset += n;
 	//+ Update Time
 	this->updateCgiTime();

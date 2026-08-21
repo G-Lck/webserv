@@ -7,6 +7,14 @@ following features function correctly:
 - For every test, you should receive the appropriate status code.
 - Upload some files to the server and retrieve them.
 
+File	Request	What it tests	Expected
+basic-get.txt	GET /cgi/cgi.py	Basic CGI GET	200 OK + CGI response
+query-string.txt	GET /cgi/cgi.py?name=ricky	GET + query string	200 OK + CGI sees QUERY_STRING=name=ricky
+basic-post.txt	POST /cgi/cgi.py	Basic CGI POST	200 OK + CGI receives body
+basic-post2.txt	POST /cgi/cgi.py	Another POST/body test	200 OK + correct body
+json.txt	POST /cgi/cgi.py + JSON	CGI JSON input	200 OK + CGI receives JSON
+wrong-method.txt	e.g. PUT /cgi/cgi.py	Unsupported CGI method	Appropriate 405/501 depending on your server
+
 * Check CGI
 Pay attention to the following:
 

@@ -1,0 +1,7 @@
+POST /cgi/cgi.py HTTP/1.1
+Host: localhost
+Content-Length: 16
+Content-Type: application/json
+Connection: close
+
+{"status":"ok"}

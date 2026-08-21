@@ -1,0 +1,3 @@
+GET /cgi/cgi.py?name=ricky&test=123 HTTP/1.1
+Host: localhost
+Connection: close
