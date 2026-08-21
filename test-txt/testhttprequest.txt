@@ -1,1 +1,0 @@
-GET /does-not-exist HTTP/1.1

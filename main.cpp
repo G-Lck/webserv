@@ -54,7 +54,6 @@ int	main( int ac, char **av )
 	}
 }
 
-//~ WHAT DO WE DO WITH THIS, YOUR BROTHER ADDED IT, WE HANDLE IT DIFFERENT, I DONT KNOW
 //- When send() returns EPIPE, kernel sends your process a SIGPIPE signal. Default behavior of SIGPIPE is to terminate the process
 //- This can happen when a single client close their connection mid-write (could crash your entire server).
 //- Here we mute this signal and we handle errors from send() ourselves, instead of killing the server.
