@@ -3,4 +3,6 @@
 */*.o
 */*/*.o
 log/*.log
+!config/configs/real/exam_config.conf 
 WebServ
+TODO
